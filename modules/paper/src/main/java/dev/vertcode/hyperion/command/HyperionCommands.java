@@ -22,6 +22,7 @@ import dev.vertcode.hyperion.HyperionPlugin;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessagePalette;
+import dev.vertcode.hyperion.pack.PackManager;
 
 import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
@@ -53,8 +54,13 @@ public final class HyperionCommands {
      *
      * @param plugin the plugin that owns the commands
      * @param registry the loaded blueprints the commands show and reload
+     * @param packs the resource pack the pack commands build and send
      */
-    public static void register(final HyperionPlugin plugin, final BlueprintRegistry registry) {
+    public static void register(
+            final HyperionPlugin plugin,
+            final BlueprintRegistry registry,
+            final PackManager packs
+    ) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
                 .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
@@ -81,8 +87,12 @@ public final class HyperionCommands {
                 new BlueprintSuggestions(registry),
                 new ListCommand(registry),
                 new InfoCommand(registry),
-                new ReloadCommand(plugin, registry),
-                new ValidateCommand(registry)
+                new ReloadCommand(plugin, registry, packs),
+                new ValidateCommand(registry),
+                new PackBuildCommand(plugin, packs),
+                new PackSendCommand(packs),
+                new PackStatusCommand(packs),
+                new PackExportCommand(plugin, packs)
         );
     }
 

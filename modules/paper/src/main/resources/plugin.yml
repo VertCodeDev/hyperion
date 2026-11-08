@@ -18,6 +18,10 @@ permissions:
       hyperion.command.info: true
       hyperion.command.reload: true
       hyperion.command.validate: true
+      hyperion.command.pack.build: true
+      hyperion.command.pack.send: true
+      hyperion.command.pack.status: true
+      hyperion.command.pack.export: true
   hyperion.command.help:
     description: See the Hyperion help menu.
     default: op
@@ -32,4 +36,16 @@ permissions:
     default: op
   hyperion.command.validate:
     description: See the warnings and errors from loading the models.
+    default: op
+  hyperion.command.pack.build:
+    description: Build the resource pack again.
+    default: op
+  hyperion.command.pack.send:
+    description: Offer the resource pack to players.
+    default: op
+  hyperion.command.pack.status:
+    description: See how the resource pack is hosted and how players are doing with it.
+    default: op
+  hyperion.command.pack.export:
+    description: Write the resource pack into the data folder.
     default: op

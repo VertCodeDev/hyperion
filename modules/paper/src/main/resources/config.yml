@@ -1,0 +1,37 @@
+# Hyperion's settings. /hy reload reads this file again.
+#
+# Keys Hyperion adds in an update are written into this file on the next start; your changes stay.
+
+# The resource pack that holds every model.
+pack:
+  # How players get the pack:
+  #   self-host  Hyperion serves it from a small web server on this machine.
+  #   url        You host the zip yourself: run /hy pack export, upload the file, put its link
+  #              in "url". Upload it again after every change, or downloads fail.
+  #   off        Hyperion sends nothing. Merge the exported zip into your own server pack.
+  hosting: self-host
+
+  self-host:
+    # The port the web server listens on. Open it in your firewall.
+    port: 8163
+    # The address players download from. Empty uses the address each player joined with,
+    # which is right unless the web server sits behind a different address.
+    address: ""
+
+  # The link to your uploaded zip, for hosting: url.
+  url: ""
+
+  # Offer the pack to players when they join.
+  send-on-join: true
+  # Kick players who decline the pack or fail to download it.
+  required: false
+  # Send the new pack to everyone online when a reload changes it.
+  resend-on-change: true
+
+  # The item every model part is shown as; players never see the item itself.
+  # On 1.21 to 1.21.3 the models hang off this item's model file, so pick a flat item no other
+  # pack changes, and only dyeable items such as leather_horse_armor can be tinted there.
+  # From 1.21.4 any item works the same.
+  base-item: paper
+  # The first custom model data number Hyperion uses on 1.21 to 1.21.3.
+  custom-model-data-start: 10000

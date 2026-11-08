@@ -357,14 +357,16 @@ public final class BbmodelReader {
             png = new byte[0];
         }
 
-        int frames = width <= 0 ? 1 : Math.max(1, height / width);
+        int uvWidth = (int) JsonFields.number(texture, "uv_width", resolutionWidth);
+        int uvHeight = (int) JsonFields.number(texture, "uv_height", resolutionHeight);
+        int frames = Texture.frames(width, height, uvWidth, uvHeight);
 
         return new Texture(
                 name,
                 width,
                 height,
-                (int) JsonFields.number(texture, "uv_width", resolutionWidth),
-                (int) JsonFields.number(texture, "uv_height", resolutionHeight),
+                uvWidth,
+                uvHeight,
                 png,
                 Math.max(1, (int) JsonFields.number(texture, "frame_time", 1f)),
                 JsonFields.bool(texture, "frame_interpolate", false),

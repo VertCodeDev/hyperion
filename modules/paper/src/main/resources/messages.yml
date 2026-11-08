@@ -74,6 +74,24 @@ validate:
   error: " <error><issue>"
   more: " <dim>...and <count> more in the server log"
 
+# The resource pack
+pack:
+  prompt: "<prefix><muted>This pack shows the server's models."
+  kick: "<prefix><newline><newline><muted>This server needs its resource pack to show its models.<newline>Rejoin and accept the pack."
+  building: "<prefix><muted>Building the resource pack..."
+  built: "<prefix><text>Built the pack: <highlight><size></highlight>, <files> files in <time> ms<muted> (<hash>)"
+  build-failed: "<prefix><error>The pack could not be built: <reason>"
+  not-built: "<prefix><error>The pack is not built yet."
+  sending-off: "<prefix><error>Hyperion does not send the pack: pack.hosting is off in config.yml."
+  sent: "<prefix><text>Sent the pack to <highlight><count></highlight> player(s)."
+  exported: "<prefix><text>Wrote the pack to <highlight><file>"
+  export-failed: "<prefix><error>The pack could not be written: <reason>"
+  status-heading: "<primary>Resource pack"
+  status-hosting: " <muted>Hosting: <text><hosting>"
+  status-url: " <muted>Link: <text><url>"
+  status-pack: " <muted>Pack: <text><size>, <files> files<muted> (<hash>)"
+  status-players: " <muted>Players: <success><loaded> loaded<muted>, <text><pending> downloading<muted>, <warning><declined> declined<muted>, <error><failed> failed"
+
 # Mistakes when typing a command
 command:
   usage: "<prefix><error>Usage: <muted><syntax>"

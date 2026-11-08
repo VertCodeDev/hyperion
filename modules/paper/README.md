@@ -25,11 +25,12 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
-| `config` | `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
+| `config` | `HyperionConfig` and `PackSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
+| `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it |
+| `listener` | `PackListener`: offers the pack on join and tracks how players do with it |
 
-More packages arrive with the features that need them: `pack` for the resource pack, `model` for
-live models and rendering, `animation`, `packet` for PacketEvents listeners and `listener` for
-Bukkit events.
+More packages arrive with the features that need them: `model` for live models and rendering,
+`animation`, and `packet` for PacketEvents listeners.
 
 ## Models
 
@@ -61,9 +62,42 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy reload [model]` | `hyperion.command.reload` | Load every model again, or one, and show what changed |
 | `/hy validate [model]` | `hyperion.command.validate` | The warnings and errors from the last load |
 
-A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works.
+| `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
+| `/hy pack send [players]` | `hyperion.command.pack.send` | Offer the pack again, to some players or everyone |
+| `/hy pack status` | `hyperion.command.pack.status` | Hosting, link, size and hash, and how players are doing with it |
+| `/hy pack export` | `hyperion.command.pack.export` | Write the pack to `plugins/Hyperion/hyperion-pack.zip` |
+
+A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works. `/hy reload` also
+reads `config.yml` and `messages.yml` again and rebuilds the pack.
 
 `hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
+
+## Resource pack
+
+Every loaded model is built into one resource pack, for the version the server runs, after
+startup and after every `/hy reload`. The pack format comes from the server jar itself, so a new
+Minecraft version needs no update for it. The same models give the same zip and hash, so players
+who already have the pack do not download it again.
+
+Each bone becomes one item model centered on its pivot. Item models only hold cubes within -16
+to 32 pixels, turned on one axis by 22.5 or 45 degrees, so a bone that is too big is shrunk and
+scaled back up by its display, and a cube turned any other way becomes a part of its own that the
+display turns. Those are 1.21's limits, so a model renders the same on every version. From 1.21.4
+each part is an item definition; on 1.21 to 1.21.3 it is a custom model data number on the base
+item.
+
+`config.yml` decides how players get the pack:
+
+| `pack.hosting` | What happens |
+|---|---|
+| `self-host` (default) | A small web server built into Hyperion serves it on `pack.self-host.port`. Players download from the address they joined with, unless `pack.self-host.address` says otherwise. |
+| `url` | You upload the zip from `/hy pack export` and put its link in `pack.url`. Upload it again after every change. |
+| `off` | Nothing is sent; merge the exported zip into your own pack. |
+
+`pack.required` kicks players who decline or fail the download, `pack.send-on-join` and
+`pack.resend-on-change` decide when it is offered, and `pack.base-item` (default `paper`) is the
+item parts are shown as. On 1.21 to 1.21.3 only a dyeable base item such as
+`leather_horse_armor` can be tinted.
 
 ## Messages
 

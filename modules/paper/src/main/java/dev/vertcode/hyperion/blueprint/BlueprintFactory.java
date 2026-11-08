@@ -27,11 +27,10 @@ import dev.vertcode.hyperion.blueprint.metadata.JsonMetadata;
  * Turn {@link ModelData} into a {@link Blueprint}: the bone tree in blocks, unique names and the
  * bounding box.
  *
- * <p>Blockbench works in pixels, 16 to a block, with Y up, and turns every group, cube and
- * locator in ZYX order: X first, then Y, then Z, each around the fixed model axes. Bones and
- * locators are converted to blocks here; cubes stay in pixels for the resource pack. A
- * {@code java_block} project spans 0 to 16 on X and Z, so it is moved by 8 pixels to put its
- * center on the model's origin like every other format.
+ * <p>Blockbench works in pixels, 16 to a block, with Y up, and turns everything in ZYX order
+ * (see {@link BlockbenchRotation}). Bones and locators are converted to blocks here; cubes stay
+ * in pixels for the resource pack. A {@code java_block} project spans 0 to 16 on X and Z, so it
+ * is moved by 8 pixels to put its center on the model's origin like every other format.
  */
 final class BlueprintFactory {
 
@@ -94,20 +93,6 @@ final class BlueprintFactory {
     }
 
     /**
-     * Turn Euler angles from Blockbench into a rotation, in Blockbench's ZYX order.
-     *
-     * @param degrees the angles around X, Y and Z in degrees
-     * @return the rotation
-     */
-    static Quaternionf rotation(final Vector3fc degrees) {
-        return new Quaternionf().rotationZYX(
-                (float) Math.toRadians(degrees.z()),
-                (float) Math.toRadians(degrees.y()),
-                (float) Math.toRadians(degrees.x())
-        );
-    }
-
-    /**
      * Build the bones and locators under one level of the outliner.
      *
      * @param ids the ids at this level, in order
@@ -164,7 +149,7 @@ final class BlueprintFactory {
     private void bone(final Group group, final @Nullable BlueprintBone parent, final Matrix4fc parentWorld) {
         String name = this.unique(group.name(), this.bones, "group");
         Vector3f pivot = new Vector3f(group.origin()).add(this.shift);
-        Quaternionf rotation = rotation(group.rotation());
+        Quaternionf rotation = BlockbenchRotation.of(group.rotation());
 
         List<Cube> cubes = new ArrayList<>();
         for (String child : group.children()) {
@@ -214,7 +199,7 @@ final class BlueprintFactory {
                 name,
                 parent,
                 position,
-                rotation(locator.rotation()),
+                BlockbenchRotation.of(locator.rotation()),
                 locator.metadata()
         ));
     }
@@ -245,7 +230,7 @@ final class BlueprintFactory {
             Vector3fc origin = cube.origin();
             Matrix4f transform = new Matrix4f(world)
                     .translate(origin)
-                    .rotate(rotation(cube.rotation()))
+                    .rotate(BlockbenchRotation.of(cube.rotation()))
                     .translate(-origin.x(), -origin.y(), -origin.z());
             float inflate = cube.inflate();
             for (int i = 0; i < 8; i++) {

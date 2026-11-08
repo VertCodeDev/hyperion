@@ -33,6 +33,26 @@ public final class HyperionPermissions {
      */
     public static final String VALIDATE = "hyperion.command.validate";
 
+    /**
+     * Build the resource pack again, through {@code /hyperion pack build}.
+     */
+    public static final String PACK_BUILD = "hyperion.command.pack.build";
+
+    /**
+     * Send the resource pack to players, through {@code /hyperion pack send}.
+     */
+    public static final String PACK_SEND = "hyperion.command.pack.send";
+
+    /**
+     * See how the resource pack is doing, through {@code /hyperion pack status}.
+     */
+    public static final String PACK_STATUS = "hyperion.command.pack.status";
+
+    /**
+     * Write the resource pack to the data folder, through {@code /hyperion pack export}.
+     */
+    public static final String PACK_EXPORT = "hyperion.command.pack.export";
+
     private HyperionPermissions() {
     }
 }

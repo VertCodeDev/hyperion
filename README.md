@@ -93,7 +93,7 @@ designed around that one goal:
 - [ ] Planning and API design
 - [x] Plugin bootstrap and the `/hyperion` command
 - [x] Blockbench model loading
-- [ ] Resource pack generation
+- [x] Resource pack generation
 - [ ] Display entity rendering and tracking
 - [ ] Animations
 - [ ] Timeline effects (particles, sounds, events)

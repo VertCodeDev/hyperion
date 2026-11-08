@@ -115,10 +115,30 @@ public final class Texture {
     /**
      * Return how many frames the image holds, stacked from top to bottom.
      *
+     * <p>A frame has the shape of the UV size, so a 16 by 32 image with a 16 by 32 UV size is one
+     * tall frame, and a 16 by 48 image with a 16 by 16 UV size is three.
+     *
      * @return the frame count, 1 for a still texture
      */
     public int frames() {
-        return this.width <= 0 ? 1 : Math.max(1, this.height / this.width);
+        return frames(this.width, this.height, this.uvWidth, this.uvHeight);
+    }
+
+    /**
+     * Work out how many frames an image holds.
+     *
+     * @param width the image width
+     * @param height the image height
+     * @param uvWidth the UV width
+     * @param uvHeight the UV height of one frame
+     * @return the frame count, at least 1
+     */
+    public static int frames(final int width, final int height, final int uvWidth, final int uvHeight) {
+        if (width <= 0 || uvHeight <= 0) {
+            return 1;
+        }
+
+        return Math.max(1, (height * uvWidth) / (width * uvHeight));
     }
 
     /**

@@ -21,7 +21,7 @@ class BlueprintFactoryTest {
     @Test
     void turnsXFirstThenYThenZ() {
         // Blockbench turns in ZYX order: X first. X then Y sends +X to -Z; Y then X would send it to +Y.
-        Vector3f turned = BlueprintFactory.rotation(new Vector3f(90, 90, 0)).transform(new Vector3f(1, 0, 0));
+        Vector3f turned = BlockbenchRotation.of(new Vector3f(90, 90, 0)).transform(new Vector3f(1, 0, 0));
 
         assertVector(new Vector3f(0, 0, -1), turned);
     }

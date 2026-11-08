@@ -25,12 +25,13 @@ import dev.vertcode.hyperion.blueprint.LoadIssue;
 import dev.vertcode.hyperion.blueprint.LoadReport;
 import dev.vertcode.hyperion.blueprint.ReloadResult;
 import dev.vertcode.hyperion.config.HyperionMessages;
+import dev.vertcode.hyperion.pack.PackManager;
 
 import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
 /**
- * {@code /hyperion reload [model]}: load every model and {@code messages.yml} again, or one
- * model, and say what changed.
+ * {@code /hyperion reload [model]}: load every model, {@code config.yml} and {@code messages.yml}
+ * again, or one model, say what changed, and rebuild the resource pack.
  *
  * <p>Loading runs on the async scheduler; the result comes back to whoever ran the command on
  * the thread that owns them.
@@ -39,26 +40,30 @@ public final class ReloadCommand {
 
     private final HyperionPlugin plugin;
     private final BlueprintRegistry registry;
+    private final PackManager packs;
 
     /**
      * Create the command.
      *
-     * @param plugin the plugin, for reloading messages and scheduling the reply
+     * @param plugin the plugin, for reloading its files and scheduling the reply
      * @param registry the blueprints to reload
+     * @param packs the resource pack to rebuild afterwards
      */
-    public ReloadCommand(final HyperionPlugin plugin, final BlueprintRegistry registry) {
+    public ReloadCommand(final HyperionPlugin plugin, final BlueprintRegistry registry, final PackManager packs) {
         this.plugin = plugin;
         this.registry = registry;
+        this.packs = packs;
     }
 
     /**
-     * Reload one model, or every model, the {@code models/} folder and the messages.
+     * Reload one model, or every model, the {@code models/} folder and Hyperion's files, then
+     * rebuild the resource pack.
      *
      * @param source who ran the command
      * @param key the model to reload, or null for everything
      */
     @Command(HyperionCommands.ROOT + " reload [model]")
-    @CommandDescription("Load every model and the messages again, or one model")
+    @CommandDescription("Load every model and Hyperion's files again, or one model")
     @Permission(HyperionPermissions.RELOAD)
     public void reload(
             final Source source,
@@ -70,12 +75,13 @@ public final class ReloadCommand {
             HyperionMessages.RELOAD__STARTED.send(sender);
             this.registry.reloadAll()
                     .thenApply(result -> {
-                        this.plugin.reloadMessages();
+                        this.plugin.reloadFiles();
                         return result;
                     })
                     .whenComplete((result, error) -> {
                         Component reply = error == null ? summary(result) : failure(error);
                         CommandText.reply(this.plugin, sender, reply);
+                        this.packs.rebuild();
                     });
             return;
         }
@@ -85,6 +91,7 @@ public final class ReloadCommand {
         this.registry.reload(model).whenComplete((after, error) -> {
             Component reply = error == null ? reloaded(before, after) : failure(error);
             CommandText.reply(this.plugin, sender, reply);
+            this.packs.rebuild();
         });
     }
 
