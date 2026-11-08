@@ -1,0 +1,443 @@
+{
+ "meta": {
+  "format_version": "5.0",
+  "model_format": "free",
+  "box_uv": false
+ },
+ "name": "groups_layout",
+ "model_identifier": "",
+ "visible_box": [
+  1,
+  1,
+  0
+ ],
+ "resolution": {
+  "width": 16,
+  "height": 16
+ },
+ "hyperion_version": 1,
+ "textures": [
+  {
+   "name": "skin.png",
+   "id": "0",
+   "width": 16,
+   "height": 16,
+   "uv_width": 16,
+   "uv_height": 16,
+   "frame_time": 1,
+   "frame_order_type": "loop",
+   "frame_order": "",
+   "frame_interpolate": false,
+   "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGUlEQVR4nGP4z8DwnxLMMGrAqAGjBgwXAwAwxP4QHCfkAAAAAABJRU5ErkJggg=="
+  },
+  {
+   "name": "flicker.png",
+   "id": "1",
+   "frame_time": 4,
+   "frame_order_type": "custom",
+   "frame_order": "1 0 1",
+   "frame_interpolate": true,
+   "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAYCAYAAADH2bwQAAAAF0lEQVR4nGP4z8DwHx9mGFUwqmDkKQAA07l+kMDgJ74AAAAASUVORK5CYII="
+  },
+  {
+   "name": "external.png",
+   "id": "2",
+   "path": "/somewhere/external.png",
+   "source": ""
+  }
+ ],
+ "elements": [
+  {
+   "name": "body",
+   "type": "cube",
+   "uuid": "c-body",
+   "from": [
+    -4,
+    0,
+    -4
+   ],
+   "to": [
+    4,
+    8,
+    4
+   ],
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "export": true,
+   "visibility": true,
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": null,
+     "rotation": 90
+    },
+    "down": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 1
+    }
+   }
+  },
+  {
+   "name": "horn",
+   "type": "cube",
+   "uuid": "c-horn",
+   "from": [
+    -1,
+    8,
+    -1
+   ],
+   "to": [
+    1,
+    12,
+    1
+   ],
+   "origin": [
+    0,
+    8,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    22.5
+   ],
+   "inflate": 0.5,
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 5
+    }
+   }
+  },
+  {
+   "name": "hidden_cube",
+   "type": "cube",
+   "uuid": "c-hidden",
+   "from": [
+    0,
+    0,
+    0
+   ],
+   "to": [
+    1,
+    1,
+    1
+   ],
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "export": false,
+   "faces": {}
+  },
+  {
+   "name": "mouth",
+   "type": "locator",
+   "uuid": "l-mouth",
+   "position": [
+    0,
+    10,
+    -4
+   ],
+   "rotation": [
+    0,
+    45,
+    0
+   ],
+   "particle_color": "red"
+  },
+  {
+   "name": "blob",
+   "type": "mesh",
+   "uuid": "m-blob",
+   "vertices": {},
+   "faces": {}
+  }
+ ],
+ "groups": [
+  {
+   "name": "body",
+   "uuid": "g-body",
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "export": true,
+   "visibility": true,
+   "children": [],
+   "isOpen": true,
+   "hyperion_behaviors": [
+    "head",
+    "glow"
+   ],
+   "spin_speed": 2.5,
+   "boss": true,
+   "extra": {
+    "phase": "two"
+   }
+  },
+  {
+   "name": "head",
+   "uuid": "g-head",
+   "origin": [
+    0,
+    8,
+    0
+   ],
+   "rotation": [
+    90,
+    90,
+    0
+   ],
+   "export": true,
+   "visibility": false,
+   "children": []
+  }
+ ],
+ "outliner": [
+  {
+   "uuid": "g-body",
+   "isOpen": true,
+   "children": [
+    "c-body",
+    "c-hidden",
+    "m-blob",
+    {
+     "uuid": "g-head",
+     "isOpen": true,
+     "children": [
+      "c-horn",
+      "l-mouth"
+     ]
+    }
+   ]
+  },
+  {
+   "uuid": "g-missing",
+   "children": []
+  }
+ ],
+ "animations": [
+  {
+   "uuid": "a1",
+   "name": "walk",
+   "loop": "loop",
+   "override": false,
+   "length": 1.5,
+   "snapping": 24,
+   "start_delay": "",
+   "loop_delay": "query.random * 2",
+   "animators": {
+    "g-head": {
+     "name": "head",
+     "type": "bone",
+     "keyframes": [
+      {
+       "channel": "rotation",
+       "time": 0.5,
+       "interpolation": "catmullrom",
+       "data_points": [
+        {
+         "x": "math.sin(query.anim_time * 90) * 10",
+         "y": "0",
+         "z": 0
+        }
+       ]
+      },
+      {
+       "channel": "rotation",
+       "time": 0,
+       "interpolation": "linear",
+       "data_points": [
+        {
+         "x": "0",
+         "y": "0",
+         "z": "0"
+        }
+       ]
+      },
+      {
+       "channel": "position",
+       "time": 1,
+       "interpolation": "step",
+       "data_points": [
+        {
+         "x": 1,
+         "y": 2.5,
+         "z": -3
+        },
+        {
+         "x": 4,
+         "y": 5,
+         "z": 6
+        }
+       ]
+      },
+      {
+       "channel": "scale",
+       "time": 1.5,
+       "interpolation": "bezier",
+       "data_points": [
+        {
+         "x": "1.2",
+         "y": "1.2",
+         "z": "1.2"
+        }
+       ],
+       "bezier_linked": true,
+       "bezier_left_time": [
+        -0.1,
+        -0.1,
+        -0.1
+       ],
+       "bezier_left_value": [
+        0,
+        0,
+        0
+       ],
+       "bezier_right_time": [
+        0.2,
+        0.2,
+        0.2
+       ],
+       "bezier_right_value": [
+        1,
+        1,
+        1
+       ]
+      },
+      {
+       "channel": "jiggle",
+       "time": 0.2,
+       "interpolation": "linear",
+       "data_points": [
+        {
+         "x": "1"
+        }
+       ]
+      },
+      {
+       "channel": "rotation",
+       "time": 0.7,
+       "interpolation": "wobbly",
+       "data_points": [
+        {
+         "x": "5",
+         "y": "0",
+         "z": "0"
+        }
+       ]
+      }
+     ]
+    },
+    "effects": {
+     "name": "Effects",
+     "type": "effect",
+     "keyframes": [
+      {
+       "channel": "particle",
+       "time": 0.25,
+       "data_points": [
+        {
+         "effect": "flame",
+         "locator": "mouth",
+         "script": ""
+        }
+       ]
+      },
+      {
+       "channel": "sound",
+       "time": 0.5,
+       "data_points": [
+        {
+         "effect": "entity.ender_dragon.growl",
+         "file": ""
+        }
+       ]
+      }
+     ]
+    },
+    "n-1": {
+     "name": "tail_target",
+     "type": "null_object",
+     "keyframes": []
+    }
+   }
+  },
+  {
+   "uuid": "a2",
+   "name": "idle",
+   "loop": "spin",
+   "length": 2,
+   "animators": {}
+  },
+  {
+   "uuid": "a3",
+   "name": "idle",
+   "loop": "hold",
+   "length": 0.5,
+   "animators": {}
+  }
+ ]
+}

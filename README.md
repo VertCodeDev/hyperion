@@ -92,7 +92,7 @@ designed around that one goal:
 - [x] Repository, build and license
 - [ ] Planning and API design
 - [x] Plugin bootstrap and the `/hyperion` command
-- [ ] Blockbench model loading
+- [x] Blockbench model loading
 - [ ] Resource pack generation
 - [ ] Display entity rendering and tracking
 - [ ] Animations

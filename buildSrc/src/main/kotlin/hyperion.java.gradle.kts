@@ -35,6 +35,9 @@ tasks.withType<JavaCompile>().configureEach {
 
         // BytesSource keeps its array component on purpose and compares it by content.
         disable("ArrayRecordComponent")
+
+        // whenComplete is how async work ends here: its callback handles the error itself.
+        disable("FutureReturnValueIgnored")
     }
 }
 

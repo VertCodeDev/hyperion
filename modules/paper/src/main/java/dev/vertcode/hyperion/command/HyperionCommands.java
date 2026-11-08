@@ -1,6 +1,5 @@
 package dev.vertcode.hyperion.command;
 
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.incendo.cloud.annotations.AnnotationParser;
@@ -12,6 +11,7 @@ import org.incendo.cloud.paper.util.sender.PaperSimpleSenderMapper;
 import org.incendo.cloud.paper.util.sender.Source;
 
 import dev.vertcode.hyperion.HyperionPlugin;
+import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 
 /**
  * Build the Cloud command manager and register every {@code /hyperion} command.
@@ -56,8 +56,9 @@ public final class HyperionCommands {
      * {@code onEnable}.
      *
      * @param plugin the plugin that owns the commands
+     * @param registry the loaded blueprints the commands show and reload
      */
-    public static void register(final HyperionPlugin plugin) {
+    public static void register(final HyperionPlugin plugin, final BlueprintRegistry registry) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
                 .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
@@ -65,12 +66,20 @@ public final class HyperionCommands {
 
         MinecraftExceptionHandler.<Source>create(Source::source)
                 .defaultHandlers()
-                .decorator(message -> prefix().append(message))
+                .decorator(CommandText::prefixed)
                 .registerTo(manager);
 
         MinecraftHelp<Source> help = help(manager);
         AnnotationParser<Source> parser = new AnnotationParser<>(manager, Source.class);
-        parser.parse(new RootCommand(plugin, help), new HelpCommand(help));
+        parser.parse(
+                new RootCommand(plugin, help),
+                new HelpCommand(help),
+                new BlueprintSuggestions(registry),
+                new ListCommand(registry),
+                new InfoCommand(registry),
+                new ReloadCommand(plugin, registry),
+                new ValidateCommand(registry)
+        );
     }
 
     /**
@@ -88,18 +97,6 @@ public final class HyperionCommands {
                 .commandFilter(command -> command.components().size() > 1)
                 .colors(HELP_COLORS)
                 .maxResultsPerPage(HELP_PAGE_SIZE)
-                .build();
-    }
-
-    /**
-     * Return the prefix put before every error message.
-     *
-     * @return the prefix
-     */
-    private static Component prefix() {
-        return Component.text()
-                .append(Component.text("Hyperion", PRIMARY))
-                .append(Component.text(" » ", NamedTextColor.DARK_GRAY))
                 .build();
     }
 }

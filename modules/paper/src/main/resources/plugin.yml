@@ -14,6 +14,22 @@ permissions:
     default: op
     children:
       hyperion.command.help: true
+      hyperion.command.list: true
+      hyperion.command.info: true
+      hyperion.command.reload: true
+      hyperion.command.validate: true
   hyperion.command.help:
     description: See the Hyperion help menu.
+    default: op
+  hyperion.command.list:
+    description: List the loaded models.
+    default: op
+  hyperion.command.info:
+    description: See everything about one model.
+    default: op
+  hyperion.command.reload:
+    description: Load the models again.
+    default: op
+  hyperion.command.validate:
+    description: See the warnings and errors from loading the models.
     default: op

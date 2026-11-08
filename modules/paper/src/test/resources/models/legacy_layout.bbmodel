@@ -1,0 +1,171 @@
+{
+ "meta": {
+  "format_version": "4.10",
+  "model_format": "bedrock",
+  "box_uv": true
+ },
+ "name": "legacy_layout",
+ "resolution": {
+  "width": 32,
+  "height": 32
+ },
+ "textures": [
+  {
+   "name": "t.png",
+   "id": "0",
+   "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAK0lEQVR4nO3OIQEAAAwEoetfeovxBoGnq1tKQEBAQEBAQEBAQEBAQEBgHXhUDfhqRFDd3gAAAABJRU5ErkJggg=="
+  }
+ ],
+ "elements": [
+  {
+   "name": "arm_cube",
+   "type": "cube",
+   "uuid": "c-arm",
+   "from": [
+    4,
+    6,
+    -1
+   ],
+   "to": [
+    6,
+    12,
+    1
+   ],
+   "origin": [
+    4,
+    12,
+    0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    }
+   }
+  },
+  {
+   "name": "other_arm",
+   "type": "cube",
+   "uuid": "c-arm2",
+   "from": [
+    -6,
+    6,
+    -1
+   ],
+   "to": [
+    -4,
+    12,
+    1
+   ],
+   "origin": [
+    -4,
+    12,
+    0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    }
+   }
+  },
+  {
+   "name": "pebble",
+   "uuid": "c-pebble",
+   "from": [
+    10,
+    0,
+    10
+   ],
+   "to": [
+    11,
+    1,
+    11
+   ],
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    }
+   }
+  },
+  {
+   "name": "tip",
+   "type": "null_object",
+   "uuid": "n-tip",
+   "position": [
+    5,
+    6,
+    0
+   ]
+  }
+ ],
+ "outliner": [
+  {
+   "name": "root",
+   "uuid": "g-root",
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "export": true,
+   "visibility": true,
+   "isOpen": true,
+   "children": [
+    {
+     "name": "arm",
+     "uuid": "g-arm",
+     "origin": [
+      4,
+      12,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      45
+     ],
+     "children": [
+      "c-arm",
+      "n-tip"
+     ]
+    },
+    {
+     "name": "arm",
+     "uuid": "g-arm2",
+     "origin": [
+      -4,
+      12,
+      0
+     ],
+     "children": [
+      "c-arm2"
+     ]
+    }
+   ]
+  },
+  "c-pebble"
+ ],
+ "animations": []
+}
