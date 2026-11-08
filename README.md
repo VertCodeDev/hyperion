@@ -123,7 +123,7 @@ downloads both when they are missing.
 ./gradlew build
 ```
 
-The plugin jar is `modules/paper/build/libs/Hyperion-<version>.jar`.
+The plugin jar is `modules/paper/build/libs/hyperion-paper-v<version>.jar`.
 
 | Module | What it is |
 |---|---|

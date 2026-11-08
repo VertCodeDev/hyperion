@@ -146,7 +146,7 @@ owner first.
 ./gradlew build
 ```
 
-The jar is `build/libs/Hyperion-<version>.jar`. NullAway checks the JSpecify annotations on every
+The jar is `build/libs/hyperion-paper-v<version>.jar`. NullAway checks the JSpecify annotations on every
 compile, so a null mistake fails the build.
 
 The tests read small hand-written models from `src/test/resources/models`. To check that a folder

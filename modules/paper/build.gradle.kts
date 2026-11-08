@@ -25,8 +25,7 @@ tasks.jar {
 }
 
 tasks.shadowJar {
-    archiveBaseName.set("Hyperion")
-    archiveClassifier.set("")
+    archiveFileName.set("hyperion-paper-v${project.version}.jar")
 
     val libraries = "dev.vertcode.hyperion.libs"
     relocate("org.incendo.cloud", "$libraries.cloud")
