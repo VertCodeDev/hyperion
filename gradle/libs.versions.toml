@@ -1,6 +1,12 @@
 [versions]
-java = "25"
-paper = "26.3.build.174-beta"
+# Hyperion runs on Minecraft 1.21 up to 26.3. It compiles against the oldest api and the oldest
+# Java those servers run on, so nothing newer can slip in by accident.
+java = "21"
+paper = "1.21-R0.1-SNAPSHOT"
+# The newest version Hyperion supports. The build compiles a second time against its api, with the
+# Java it needs, to catch anything a newer server has removed.
+java-newest = "25"
+paper-newest = "26.3.build.174-beta"
 packetevents = "2.14.0"
 cloud = "2.1.0"
 cloud-minecraft = "2.0.1"
@@ -17,6 +23,7 @@ shadow = "9.6.1"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+paper-api-newest = { module = "io.papermc.paper:paper-api", version.ref = "paper-newest" }
 packetevents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetevents" }
 cloud-annotations = { module = "org.incendo:cloud-annotations", version.ref = "cloud" }
 cloud-paper = { module = "org.incendo:cloud-paper", version.ref = "cloud-minecraft" }

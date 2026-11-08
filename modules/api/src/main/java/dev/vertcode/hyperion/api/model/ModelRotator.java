@@ -22,7 +22,7 @@ public interface ModelRotator {
      * @return the rotator
      */
     static ModelRotator anchor() {
-        return (_, base) -> base;
+        return (model, base) -> base;
     }
 
     /**
@@ -32,7 +32,7 @@ public interface ModelRotator {
      * @return the rotator
      */
     static ModelRotator fixed(final ModelRotation rotation) {
-        return (_, _) -> rotation;
+        return (model, base) -> rotation;
     }
 
     /**
@@ -42,7 +42,7 @@ public interface ModelRotator {
      * @return the rotator
      */
     static ModelRotator yawOffset(final float degrees) {
-        return (_, base) -> base.withYaw(base.yaw() + degrees);
+        return (model, base) -> base.withYaw(base.yaw() + degrees);
     }
 
     /**

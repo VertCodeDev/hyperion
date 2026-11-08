@@ -1,6 +1,5 @@
 package dev.vertcode.hyperion.api.model.behavior.builtin;
 
-import org.bukkit.Input;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -52,7 +51,7 @@ public interface SeatController {
      * @param input the keys the rider holds
      * @return the vehicle's velocity in blocks per tick
      */
-    Vector steer(Player rider, Entity vehicle, Input input);
+    Vector steer(Player rider, Entity vehicle, RiderInput input);
 
     /**
      * Return whether the vehicle flies: no gravity while a player steers.

@@ -89,7 +89,7 @@ public final class CommandText {
      */
     public static void reply(final Plugin plugin, final CommandSender sender, final Component message) {
         if (sender instanceof Entity entity) {
-            entity.getScheduler().run(plugin, _ -> sender.sendMessage(message), null);
+            entity.getScheduler().run(plugin, scheduled -> sender.sendMessage(message), null);
             return;
         }
 

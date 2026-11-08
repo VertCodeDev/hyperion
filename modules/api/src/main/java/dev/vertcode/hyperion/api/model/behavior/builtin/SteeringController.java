@@ -1,6 +1,5 @@
 package dev.vertcode.hyperion.api.model.behavior.builtin;
 
-import org.bukkit.Input;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -31,15 +30,15 @@ record SteeringController(float speed, float jumpVelocity, boolean flies) implem
     }
 
     @Override
-    public Vector steer(final Player rider, final Entity vehicle, final Input input) {
+    public Vector steer(final Player rider, final Entity vehicle, final RiderInput input) {
         double yaw = Math.toRadians(rider.getYaw());
         double pitch = this.flies ? Math.toRadians(rider.getPitch()) : 0;
         double flat = Math.cos(pitch);
         Vector ahead = new Vector(-Math.sin(yaw) * flat, -Math.sin(pitch), Math.cos(yaw) * flat);
         Vector left = new Vector(Math.cos(yaw), 0, Math.sin(yaw));
 
-        Vector movement = ahead.multiply(axis(input.isForward(), input.isBackward()))
-                .add(left.multiply(axis(input.isLeft(), input.isRight())));
+        Vector movement = ahead.multiply(axis(input.forward(), input.backward()))
+                .add(left.multiply(axis(input.left(), input.right())));
         if (movement.lengthSquared() > 1) {
             movement.normalize();
         }
@@ -47,11 +46,11 @@ record SteeringController(float speed, float jumpVelocity, boolean flies) implem
         movement.multiply(this.speed);
 
         if (this.flies) {
-            return input.isJump() ? movement.setY(movement.getY() + this.speed) : movement;
+            return input.jump() ? movement.setY(movement.getY() + this.speed) : movement;
         }
 
         // Walking keeps the vehicle's own fall, so gravity still pulls it down off a ledge.
-        double vertical = input.isJump() && vehicle.isOnGround() ? this.jumpVelocity : vehicle.getVelocity().getY();
+        double vertical = input.jump() && vehicle.isOnGround() ? this.jumpVelocity : vehicle.getVelocity().getY();
 
         return movement.setY(vertical);
     }

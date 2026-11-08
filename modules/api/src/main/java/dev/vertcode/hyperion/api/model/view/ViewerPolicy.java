@@ -21,7 +21,7 @@ public interface ViewerPolicy {
      * @return the policy
      */
     static ViewerPolicy everyone() {
-        return _ -> true;
+        return player -> true;
     }
 
     /**

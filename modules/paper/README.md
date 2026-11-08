@@ -1,7 +1,7 @@
 # Hyperion plugin
 
 The plugin server owners install: it loads Blockbench models, builds the resource pack and shows
-models to players. One jar runs on Paper, Folia and Canvas.
+models to players. One jar runs on Paper, Folia and Canvas, from Minecraft 1.21 to 26.3.
 
 The jar carries the [api](../api/README.md) and one library, renamed under
 `dev.vertcode.hyperion.libs` so it never clashes with another plugin's copy. The server installs
@@ -63,6 +63,22 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works.
 
 `hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
+
+## Versions
+
+One jar supports every version from 1.21 to 26.3. To keep it that way:
+
+- The code is compiled for Java 21, the oldest Java those servers run on.
+- It is compiled against the Paper 1.21 api, so a method only newer servers have cannot be used
+  by accident.
+- `./gradlew build` compiles it a second time against the 26.3 api, so a method newer servers
+  removed fails the build too.
+- A difference between versions is a `Feature` in the api, named once with the version it arrived
+  in. Code asks `Feature.ITEM_MODEL_DEFINITIONS.available()` rather than comparing version numbers,
+  and never names a Paper constant some versions lack: the scale attribute, for one, is looked up
+  by the key `Feature.PLAIN_ATTRIBUTE_KEYS` says the server uses.
+- A Paper method only newer servers have will go in a small module per version range, compiled
+  against that version's api and loaded only on servers that have it.
 
 ## Threading
 

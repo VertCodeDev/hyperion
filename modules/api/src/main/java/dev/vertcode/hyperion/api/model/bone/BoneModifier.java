@@ -10,7 +10,7 @@ package dev.vertcode.hyperion.api.model.bone;
  * it cheap. Hyperion drops a modifier when the plugin it comes from disables.
  *
  * <pre>{@code
- * bone.modifier(Key.key("myplugin", "spin"), (_, transform) ->
+ * bone.modifier(Key.key("myplugin", "spin"), (spun, transform) ->
  *         transform.withRotation(new Quaternionf().rotateY(System.nanoTime() / 1.0e9f)));
  * }</pre>
  */

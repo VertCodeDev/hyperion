@@ -31,7 +31,7 @@ public interface ModelScaler {
             throw new IllegalArgumentException("A model scale must be above 0");
         }
 
-        return _ -> scale;
+        return model -> scale;
     }
 
     /**
@@ -46,7 +46,8 @@ public interface ModelScaler {
                 return 1f;
             }
 
-            AttributeInstance attribute = living.getAttribute(Attribute.SCALE);
+            Attribute scale = ScaleAttribute.get();
+            AttributeInstance attribute = scale == null ? null : living.getAttribute(scale);
 
             return attribute == null ? 1f : (float) attribute.getValue();
         };

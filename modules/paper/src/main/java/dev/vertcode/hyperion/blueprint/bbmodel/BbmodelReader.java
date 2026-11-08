@@ -340,7 +340,7 @@ public final class BbmodelReader {
         if (source.startsWith(PNG_PREFIX)) {
             try {
                 png = Base64.getDecoder().decode(source.substring(PNG_PREFIX.length()));
-            } catch (IllegalArgumentException _) {
+            } catch (IllegalArgumentException exception) {
                 this.report.warn(where("texture", name), BAD_IMAGE);
             }
         } else {
@@ -387,7 +387,7 @@ public final class BbmodelReader {
                 for (String frame : WHITESPACE.splitAsStream(typed).toList()) {
                     try {
                         order.add(Integer.parseInt(frame));
-                    } catch (NumberFormatException _) {
+                    } catch (NumberFormatException exception) {
                         // Blockbench leaves the field empty when no custom order was typed.
                     }
                 }

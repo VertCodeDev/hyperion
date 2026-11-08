@@ -4,8 +4,8 @@
 *Models, animations and custom armor for Minecraft servers, built to stay fast*
 
 [![](https://img.shields.io/github/license/VertCodeDev/hyperion?style=flat-square)](LICENSE)
-[![](https://img.shields.io/badge/minecraft-26.3-8FCA5C?style=flat-square)](https://www.minecraft.net/en-us/download/server)
-[![](https://img.shields.io/badge/java-25-ED8B00?style=flat-square)](https://adoptium.net/)
+[![](https://img.shields.io/badge/minecraft-1.21%20to%2026.3-8FCA5C?style=flat-square)](https://www.minecraft.net/en-us/download/server)
+[![](https://img.shields.io/badge/java-21%2B-ED8B00?style=flat-square)](https://adoptium.net/)
 [![](https://img.shields.io/badge/folia%20%26%20canvas-ready-5865F2?style=flat-square)](https://github.com/VertCodeDev/hyperion#readme)
 [![](https://img.shields.io/github/issues/VertCodeDev/hyperion?style=flat-square&logo=github)](https://github.com/VertCodeDev/hyperion/issues)
 
@@ -115,7 +115,9 @@ designed around that one goal:
 
 [![](https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/built-with/gradle_vector.svg)](https://gradle.org/)
 
-Hyperion needs Java 25. The Gradle toolchain downloads it when it is missing.
+Building needs Java 21 and Java 25: Hyperion compiles for Java 21 so it runs on 1.21 servers, and
+checks itself a second time against the 26.3 api, which needs Java 25. The Gradle toolchain
+downloads both when they are missing.
 
 ```
 ./gradlew build

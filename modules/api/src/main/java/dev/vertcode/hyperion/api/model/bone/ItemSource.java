@@ -41,7 +41,7 @@ public interface ItemSource {
     static ItemSource fixed(final @Nullable ItemStack item) {
         ItemStack copy = item == null ? null : item.clone();
 
-        return _ -> copy;
+        return context -> copy;
     }
 
     /**

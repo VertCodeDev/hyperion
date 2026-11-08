@@ -121,7 +121,7 @@ final class JsonFields {
 
         try {
             return primitive.getAsFloat();
-        } catch (NumberFormatException _) {
+        } catch (NumberFormatException exception) {
             return fallback;
         }
     }

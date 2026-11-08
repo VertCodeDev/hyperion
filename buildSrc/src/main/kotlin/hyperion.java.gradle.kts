@@ -2,8 +2,8 @@ import net.ltgt.gradle.errorprone.CheckSeverity
 import net.ltgt.gradle.errorprone.errorprone
 
 // Every module: the Java toolchain from the version catalog, UTF-8, -parameters, Lombok,
-// JSpecify and JetBrains annotations, JUnit 5, and NullAway checking the JSpecify annotations
-// at compile time through Error Prone.
+// JSpecify and JetBrains annotations, JUnit 5, NullAway checking the JSpecify annotations at
+// compile time through Error Prone, and a second compile against the newest supported Paper api.
 plugins {
     java
     id("net.ltgt.errorprone")
@@ -59,4 +59,29 @@ dependencies {
     testRuntimeOnly(libs.findLibrary("junit-platform-launcher").get())
     errorprone(libs.findLibrary("errorprone-core").get())
     errorprone(libs.findLibrary("nullaway").get())
+}
+
+// Hyperion compiles against the oldest Paper api it supports, so nothing newer can be used by
+// accident. This second compile, against the newest api, catches the opposite: an old method a
+// newer server has removed. It is part of `check`, so every build runs it.
+val newestPaper = configurations.create("newestPaper")
+val mainSources = the<SourceSetContainer>()["main"]
+
+dependencies {
+    newestPaper(libs.findLibrary("paper-api-newest").get())
+}
+
+val compileAgainstNewestPaper = tasks.register<JavaCompile>("compileAgainstNewestPaper") {
+    source = mainSources.java
+    classpath = newestPaper + mainSources.compileClasspath.filter { !it.name.startsWith("paper-api-") }
+    options.annotationProcessorPath = mainSources.annotationProcessorPath
+    destinationDirectory.set(layout.buildDirectory.dir("classes/newest-paper"))
+    javaCompiler.set(javaToolchains.compilerFor {
+        languageVersion.set(JavaLanguageVersion.of(libs.findVersion("java-newest").get().requiredVersion))
+    })
+    options.errorprone.enabled.set(false)
+}
+
+tasks.named("check") {
+    dependsOn(compileAgainstNewestPaper)
 }

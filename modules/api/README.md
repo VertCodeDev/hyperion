@@ -33,6 +33,7 @@ boss.animator().play("roar");
 | `api.model.metadata` | Custom data kept from Blockbench files |
 | `api.animation` | Basic animation playback; the full api comes later |
 | `api.event` | Spawn, removal, interaction, viewer and blueprint load events |
+| `api.version` | `MinecraftVersion` and `Feature`: what the running server has, for code that runs on 1.21 to 26.3 |
 
 ## Threading
 

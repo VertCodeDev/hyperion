@@ -19,7 +19,7 @@ public final class HyperionPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         // Blueprints
-        Executor async = task -> this.getServer().getAsyncScheduler().runNow(this, _ -> task.run());
+        Executor async = task -> this.getServer().getAsyncScheduler().runNow(this, scheduled -> task.run());
         BlueprintRegistry registry = new BlueprintRegistry(
                 this.getDataPath().resolve("models"),
                 new HyperionFormatRegistry(),
