@@ -4,7 +4,6 @@ import java.util.Locale;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotation.specifier.Greedy;
 import org.incendo.cloud.annotations.Argument;
@@ -16,6 +15,9 @@ import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
+import dev.vertcode.hyperion.config.HyperionMessages;
+
+import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
 /**
  * {@code /hyperion list [filter]}: every loaded model, each a click away from its info.
@@ -51,52 +53,45 @@ public final class ListCommand {
         int shown = 0;
         int matches = 0;
         for (Blueprint blueprint : this.registry.all()) {
-            String key = blueprint.key().asString();
-            if (!key.contains(needle)) {
+            if (!blueprint.key().asString().contains(needle)) {
                 continue;
             }
 
             matches++;
             if (shown < MAX_LINES) {
-                lines.appendNewline().append(line(blueprint));
+                lines.appendNewline().append(entry(blueprint));
                 shown++;
             }
         }
 
         if (matches == 0) {
-            sender.sendMessage(CommandText.prefixed(Component.text(
-                    filter == null
-                            ? "No models are loaded. Put .bbmodel files in plugins/Hyperion/models and run /hy reload."
-                            : "No model matches '" + filter + "'.",
-                    NamedTextColor.GRAY
-            )));
+            HyperionMessages empty = filter == null ? HyperionMessages.LIST__EMPTY : HyperionMessages.LIST__NO_MATCH;
+            empty.send(sender, value("filter", String.valueOf(filter)));
             return;
         }
 
         if (matches > shown) {
-            String more = " ...and " + (matches - shown) + " more; add a filter to narrow the list";
-            lines.appendNewline().append(Component.text(more, NamedTextColor.DARK_GRAY));
+            lines.appendNewline().append(HyperionMessages.LIST__MORE.component(value("count", matches - shown)));
         }
 
-        sender.sendMessage(CommandText.heading("Models (" + matches + ")").append(lines.build()));
+        sender.sendMessage(HyperionMessages.LIST__HEADING.component(value("count", matches)).append(lines.build()));
     }
 
     /**
-     * Write one model's line: its key, clickable, and its counts.
+     * Write one model's line, a click away from its info.
      *
      * @param blueprint the blueprint
      * @return the line
      */
-    private static Component line(final Blueprint blueprint) {
+    private static Component entry(final Blueprint blueprint) {
         String key = blueprint.key().asString();
-        String counts = "  " + blueprint.bones().size() + " bones, " + blueprint.animations().size()
-                + " animations, " + blueprint.locators().size() + " locators";
-        Component name = CommandText.clickable(
-                Component.text(" " + key, NamedTextColor.WHITE),
-                "/hyperion info " + key,
-                "Show this model's info"
+        Component line = HyperionMessages.LIST__ENTRY.component(
+                value("model", key),
+                value("bones", blueprint.bones().size()),
+                value("animations", blueprint.animations().size()),
+                value("locators", blueprint.locators().size())
         );
 
-        return name.append(Component.text(counts, NamedTextColor.GRAY));
+        return CommandText.clickable(line, "/hyperion info " + key, HyperionMessages.LIST__ENTRY_HOVER.component());
     }
 }

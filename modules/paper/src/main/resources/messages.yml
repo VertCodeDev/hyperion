@@ -1,0 +1,99 @@
+# Hyperion's chat messages, in MiniMessage: https://docs.advntr.dev/minimessage/format.html
+#
+# Colors come from the palette and work as tags: <primary>, <highlight>, <text>, <muted>, <dim>,
+# <success>, <warning> and <error>. <prefix> puts the prefix in front of a message. Other words
+# in angle brackets, such as <count> or <model>, are filled in by Hyperion.
+#
+# Keys Hyperion adds in an update are written into this file on the next start; your changes stay.
+
+palette:
+  primary: "#9B6BFF"
+  highlight: "#C9B2FF"
+  text: "#FFFFFF"
+  muted: "#A8A3B8"
+  dim: "#5E5873"
+  success: "#6EE7A0"
+  warning: "#FFD166"
+  error: "#FF6B7A"
+
+prefix: "<gradient:#9B6BFF:#5EC8FF>Hyperion</gradient> <dim>» "
+
+model-not-loaded: "<prefix><error>No model is loaded as <model>."
+
+# /hy list
+list:
+  heading: "<primary>Models <dim>(<count>)"
+  entry: " <text><model><muted>  <bones> bones, <animations> animations, <locators> locators"
+  entry-hover: "<muted>Show this model's info"
+  more: " <dim>...and <count> more; add a filter to narrow the list"
+  empty: "<prefix><muted>No models are loaded. Put .bbmodel files in plugins/Hyperion/models and run /hy reload."
+  no-match: "<prefix><muted>No model matches '<filter>'."
+
+# /hy info
+info:
+  heading: "<primary><model> <dim>(revision <revision>)"
+  source: " <muted>Source: <text><source>"
+  source-plugin: " <muted>Source: <text><source> <muted>from <text><plugin>"
+  format: " <muted>Format: <text><format>"
+  size: " <muted>Size: <text><x> x <y> x <z> blocks"
+  textures: " <muted>Textures: <text><count>"
+  bones: "<primary>Bones <dim>(<count>)"
+  bone: "<indent><text><name><tags><hidden>"
+  bone-without-cubes: "<indent><muted><name><tags><hidden>"
+  bone-tags: " <highlight>[<tags>]"
+  bone-hidden: " <dim>hidden"
+  more-bones: " <dim>...and <count> more"
+  animations: "<primary>Animations <dim>(<count>)"
+  animation: "  <text><name><muted>  <length>s, <loop>"
+  locators: "<primary>Locators <dim>(<count>)"
+  locator: "  <text><name>"
+  locator-on-bone: "  <text><name><muted>  on <bone>"
+  warnings: " <warning><count> warning(s), click to see them"
+  warnings-hover: "<muted>Show the warnings"
+
+# /hy reload
+reload:
+  started: "<prefix><muted>Reloading every model..."
+  done: "<prefix><text>Loaded <highlight><loaded></highlight> model(s) in <highlight><time> ms</highlight><muted>, <failed> failed, <warnings> warning(s)."
+  changed: " <muted><model>: <text><changes>"
+  removed: " <muted><model>: <text>removed, the file is gone"
+  file-failed: " <error><file>: <reason>"
+  model-done: "<prefix><text>Reloaded <model> <muted>(revision <revision>): <changes>"
+  failed: "<prefix><error>Reload failed: <reason>"
+
+# /hy validate
+validate:
+  heading: "<primary>Models with issues <dim>(<count>)"
+  entry-errors: " <text><model><error>  <count> error(s), does not load"
+  entry-warnings: " <text><model><warning>  <count> warning(s)"
+  entry-hover: "<muted>Show every issue"
+  all-clean: "<prefix><success>All <count> model(s) loaded without problems."
+  model-clean: "<prefix><success><model> loaded without problems."
+  model-heading: "<primary><model> <dim>(<file>)"
+  warning: " <warning><issue>"
+  error: " <error><issue>"
+  more: " <dim>...and <count> more in the server log"
+
+# Mistakes when typing a command
+command:
+  usage: "<prefix><error>Usage: <muted><syntax>"
+  no-permission: "<prefix><error>You don't have permission to do that."
+  players-only: "<prefix><error>Only players can do that."
+  invalid-argument: "<prefix><error><reason>"
+  failed: "<prefix><error>Something went wrong running that command; the server log has the details."
+
+# The /hy help menu
+help:
+  title: "Hyperion help"
+  command: "Command"
+  description: "Description"
+  no-description: "No description"
+  arguments: "Arguments"
+  optional: "Optional"
+  showing-results: "Search results for"
+  no-results: "No commands match"
+  available-commands: "Commands"
+  click-to-show-help: "Click for this command's help"
+  page-out-of-range: "There is no page <page>; pick a page from 1 to <max_pages>."
+  next-page: "Next page"
+  previous-page: "Previous page"

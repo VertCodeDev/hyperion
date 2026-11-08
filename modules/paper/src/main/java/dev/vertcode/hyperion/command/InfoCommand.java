@@ -6,7 +6,6 @@ import java.util.Locale;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
@@ -26,6 +25,9 @@ import dev.vertcode.hyperion.blueprint.BlueprintLocator;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.IssueSeverity;
 import dev.vertcode.hyperion.blueprint.data.Animation;
+import dev.vertcode.hyperion.config.HyperionMessages;
+
+import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
 /**
  * {@code /hyperion info <model>}: everything about one loaded model.
@@ -33,8 +35,7 @@ import dev.vertcode.hyperion.blueprint.data.Animation;
 public final class InfoCommand {
 
     private static final int MAX_BONES = 40;
-    private static final String SIZE = "%.2f x %.2f x %.2f blocks";
-    private static final String LENGTH = "%.2fs";
+    private static final String DECIMALS = "%.2f";
 
     private final BlueprintRegistry registry;
 
@@ -64,29 +65,48 @@ public final class InfoCommand {
         CommandSender sender = source.source();
         Blueprint blueprint = this.registry.find(Key.key(key.namespace(), key.value())).orElse(null);
         if (blueprint == null) {
-            sender.sendMessage(CommandText.notLoaded(key));
+            HyperionMessages.MODEL_NOT_LOADED.send(sender, value("model", key.asString()));
             return;
         }
 
-        TextComponent.Builder message = Component.text()
-                .append(CommandText.heading(blueprint.key().asString()))
-                .append(Component.text(" (revision " + blueprint.revision() + ")", NamedTextColor.DARK_GRAY));
-        Plugin owner = blueprint.owner();
-        BoundingBox box = blueprint.boundingBox();
-        message.appendNewline().append(CommandText.row("Source", blueprint.source().name()
-                + (owner == null ? "" : " from " + owner.getName())));
-        message.appendNewline().append(CommandText.row("Format", blueprint.data().format()));
-        message.appendNewline().append(CommandText.row(
-                "Size",
-                String.format(Locale.ROOT, SIZE, box.getWidthX(), box.getHeight(), box.getWidthZ())
+        TextComponent.Builder message = Component.text().append(HyperionMessages.INFO__HEADING.component(
+                value("model", blueprint.key().asString()),
+                value("revision", blueprint.revision())
         ));
-        message.appendNewline().append(CommandText.row("Textures", String.valueOf(blueprint.textures().size())));
-
+        this.details(message, blueprint);
         this.bones(message, blueprint.bones());
         this.animations(message, blueprint);
         this.locators(message, blueprint.locators());
         this.warnings(message, blueprint);
         sender.sendMessage(message.build());
+    }
+
+    /**
+     * Add the source, format, size and texture count.
+     *
+     * @param message the message being built
+     * @param blueprint the blueprint
+     */
+    private void details(final TextComponent.Builder message, final Blueprint blueprint) {
+        Plugin owner = blueprint.owner();
+        Component source = owner == null
+                ? HyperionMessages.INFO__SOURCE.component(value("source", blueprint.source().name()))
+                : HyperionMessages.INFO__SOURCE_PLUGIN.component(
+                        value("source", blueprint.source().name()),
+                        value("plugin", owner.getName())
+                );
+        BoundingBox box = blueprint.boundingBox();
+
+        message.appendNewline().append(source);
+        Component format = HyperionMessages.INFO__FORMAT.component(value("format", blueprint.data().format()));
+        Component textures = HyperionMessages.INFO__TEXTURES.component(value("count", blueprint.textures().size()));
+        message.appendNewline().append(format);
+        message.appendNewline().append(HyperionMessages.INFO__SIZE.component(
+                value("x", decimals(box.getWidthX())),
+                value("y", decimals(box.getHeight())),
+                value("z", decimals(box.getWidthZ()))
+        ));
+        message.appendNewline().append(textures);
     }
 
     /**
@@ -96,29 +116,31 @@ public final class InfoCommand {
      * @param bones the bones, parents first
      */
     private void bones(final TextComponent.Builder message, final List<BlueprintBone> bones) {
-        message.appendNewline().append(CommandText.heading("Bones (" + bones.size() + ")"));
-        int shown = 0;
-        for (BlueprintBone bone : bones) {
-            if (shown == MAX_BONES) {
-                String more = " ...and " + (bones.size() - shown) + " more";
-                message.appendNewline().append(Component.text(more, NamedTextColor.DARK_GRAY));
+        message.appendNewline().append(HyperionMessages.INFO__BONES.component(value("count", bones.size())));
+        for (int i = 0; i < bones.size(); i++) {
+            if (i == MAX_BONES) {
+                int more = bones.size() - i;
+                message.appendNewline().append(HyperionMessages.INFO__MORE_BONES.component(value("count", more)));
                 return;
             }
 
-            String indent = "  ".repeat(bone.depth() + 1);
-            NamedTextColor color = bone.hasGeometry() ? NamedTextColor.WHITE : NamedTextColor.GRAY;
-            Component line = Component.text(indent + bone.name(), color);
+            BlueprintBone bone = bones.get(i);
             List<String> tags = bone.metadata().strings(BehaviorMatcher.TAG_FIELD);
-            if (!tags.isEmpty()) {
-                line = line.append(Component.text(" [" + String.join(", ", tags) + "]", HyperionCommands.HIGHLIGHT));
-            }
-
-            if (!bone.visibleByDefault()) {
-                line = line.append(Component.text(" hidden", NamedTextColor.DARK_GRAY));
-            }
-
-            message.appendNewline().append(line);
-            shown++;
+            Component tagged = tags.isEmpty()
+                    ? Component.empty()
+                    : HyperionMessages.INFO__BONE_TAGS.component(value("tags", String.join(", ", tags)));
+            Component hidden = bone.visibleByDefault()
+                    ? Component.empty()
+                    : HyperionMessages.INFO__BONE_HIDDEN.component();
+            HyperionMessages line = bone.hasGeometry()
+                    ? HyperionMessages.INFO__BONE
+                    : HyperionMessages.INFO__BONE_WITHOUT_CUBES;
+            message.appendNewline().append(line.component(
+                    value("indent", "  ".repeat(bone.depth() + 1)),
+                    value("name", bone.name()),
+                    value("tags", tagged),
+                    value("hidden", hidden)
+            ));
         }
     }
 
@@ -129,14 +151,15 @@ public final class InfoCommand {
      * @param blueprint the blueprint
      */
     private void animations(final TextComponent.Builder message, final Blueprint blueprint) {
-        message.appendNewline().append(CommandText.heading("Animations (" + blueprint.animations().size() + ")"));
+        int count = blueprint.animations().size();
+        message.appendNewline().append(HyperionMessages.INFO__ANIMATIONS.component(value("count", count)));
         for (String name : blueprint.animations()) {
             Animation animation = blueprint.animation(name).orElseThrow();
-            String details = "  " + String.format(Locale.ROOT, LENGTH, animation.length()) + ", "
-                    + animation.loop().name().toLowerCase(Locale.ROOT);
-            message.appendNewline()
-                    .append(Component.text("  " + name, NamedTextColor.WHITE))
-                    .append(Component.text(details, NamedTextColor.GRAY));
+            message.appendNewline().append(HyperionMessages.INFO__ANIMATION.component(
+                    value("name", name),
+                    value("length", decimals(animation.length())),
+                    value("loop", animation.loop().name().toLowerCase(Locale.ROOT))
+            ));
         }
     }
 
@@ -151,12 +174,15 @@ public final class InfoCommand {
             return;
         }
 
-        message.appendNewline().append(CommandText.heading("Locators (" + locators.size() + ")"));
+        message.appendNewline().append(HyperionMessages.INFO__LOCATORS.component(value("count", locators.size())));
         for (BlueprintLocator locator : locators) {
-            String parent = locator.parent().map(bone -> "  on " + bone.name()).orElse("");
-            message.appendNewline()
-                    .append(Component.text("  " + locator.name(), NamedTextColor.WHITE))
-                    .append(Component.text(parent, NamedTextColor.GRAY));
+            Component line = locator.parent()
+                    .map(bone -> HyperionMessages.INFO__LOCATOR_ON_BONE.component(
+                            value("name", locator.name()),
+                            value("bone", bone.name())
+                    ))
+                    .orElseGet(() -> HyperionMessages.INFO__LOCATOR.component(value("name", locator.name())));
+            message.appendNewline().append(line);
         }
     }
 
@@ -172,12 +198,21 @@ public final class InfoCommand {
             return;
         }
 
-        String key = blueprint.key().asString();
         Component line = CommandText.clickable(
-                Component.text(" " + warnings + " warning(s), click to see them", NamedTextColor.YELLOW),
-                "/hyperion validate " + key,
-                "Show the warnings"
+                HyperionMessages.INFO__WARNINGS.component(value("count", warnings)),
+                "/hyperion validate " + blueprint.key().asString(),
+                HyperionMessages.INFO__WARNINGS_HOVER.component()
         );
         message.appendNewline().append(line);
+    }
+
+    /**
+     * Write a number with two decimals, the same in every locale.
+     *
+     * @param number the number
+     * @return the text, such as {@code 1.25}
+     */
+    private static String decimals(final double number) {
+        return String.format(Locale.ROOT, DECIMALS, number);
     }
 }

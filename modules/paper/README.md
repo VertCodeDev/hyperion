@@ -25,6 +25,7 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
+| `config` | `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
 
 More packages arrive with the features that need them: `pack` for the resource pack, `model` for
 live models and rendering, `animation`, `packet` for PacketEvents listeners and `listener` for
@@ -63,6 +64,25 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works.
 
 `hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
+
+## Messages
+
+Every chat message lives in `plugins/Hyperion/messages.yml`, written in
+[MiniMessage](https://docs.advntr.dev/minimessage/format.html). Cloud's own error texts and the
+help menu come from the same file. The `palette` section sets the colors, which every message
+uses as tags (`<primary>`, `<muted>`, `<error>`...), and `<prefix>` puts the prefix in front.
+Keys a newer version adds are written into the server's file on the next start; lines the server
+changed are left alone. `/hy reload` reads the file again.
+
+In code, each line is a constant whose name spells its key (`RELOAD__MODEL_DONE` is
+`reload.model-done`), and values are passed by name:
+
+```java
+HyperionMessages.RELOAD__DONE.send(sender, value("loaded", 40), value("time", 312));
+```
+
+The one text not in the file is the about card `/hy` shows players without the help permission:
+it is how players learn which plugin draws the models.
 
 ## Versions
 

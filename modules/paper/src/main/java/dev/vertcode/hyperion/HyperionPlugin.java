@@ -10,6 +10,8 @@ import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.HyperionFormatRegistry;
 import dev.vertcode.hyperion.blueprint.ReloadResult;
 import dev.vertcode.hyperion.command.HyperionCommands;
+import dev.vertcode.hyperion.config.HyperionMessages;
+import dev.vertcode.hyperion.config.MessageBook;
 
 public final class HyperionPlugin extends JavaPlugin {
 
@@ -18,6 +20,9 @@ public final class HyperionPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // Messages
+        this.reloadMessages();
+
         // Blueprints
         Executor async = task -> this.getServer().getAsyncScheduler().runNow(this, scheduled -> task.run());
         BlueprintRegistry registry = new BlueprintRegistry(
@@ -26,10 +31,18 @@ public final class HyperionPlugin extends JavaPlugin {
                 async,
                 this.getLogger()
         );
-        registry.reloadAll().whenComplete((result, error) -> this.logLoad(result, error));
+        registry.reloadAll().whenComplete(this::logLoad);
 
         // Commands
         HyperionCommands.register(this, registry);
+    }
+
+    /**
+     * Read {@code messages.yml} again and use it from now on. Reads a file, so call it on startup
+     * or off the tick threads.
+     */
+    public void reloadMessages() {
+        HyperionMessages.install(MessageBook.load(this));
     }
 
     /**

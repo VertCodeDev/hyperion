@@ -5,7 +5,6 @@ import java.util.Map;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.incendo.cloud.annotations.Argument;
@@ -21,6 +20,9 @@ import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.IssueSeverity;
 import dev.vertcode.hyperion.blueprint.LoadIssue;
 import dev.vertcode.hyperion.blueprint.LoadReport;
+import dev.vertcode.hyperion.config.HyperionMessages;
+
+import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
 /**
  * {@code /hyperion validate [model]}: the warnings and errors from the last load.
@@ -62,7 +64,7 @@ public final class ValidateCommand {
 
         LoadReport report = this.registry.report(Key.key(key.namespace(), key.value())).orElse(null);
         if (report == null) {
-            sender.sendMessage(CommandText.notLoaded(key));
+            HyperionMessages.MODEL_NOT_LOADED.send(sender, value("model", key.asString()));
             return;
         }
 
@@ -75,9 +77,10 @@ public final class ValidateCommand {
      * @return the message
      */
     private Component overview() {
+        Map<Key, LoadReport> reports = this.registry.reports();
         TextComponent.Builder lines = Component.text();
         int withIssues = 0;
-        for (Map.Entry<Key, LoadReport> entry : this.registry.reports().entrySet()) {
+        for (Map.Entry<Key, LoadReport> entry : reports.entrySet()) {
             LoadReport report = entry.getValue();
             if (report.issues().isEmpty()) {
                 continue;
@@ -86,25 +89,24 @@ public final class ValidateCommand {
             withIssues++;
             String key = entry.getKey().asString();
             int errors = report.count(IssueSeverity.ERROR);
-            int warnings = report.count(IssueSeverity.WARNING);
-            Component counts = errors > 0
-                    ? Component.text("  " + errors + " error(s), does not load", NamedTextColor.RED)
-                    : Component.text("  " + warnings + " warning(s)", NamedTextColor.YELLOW);
-            Component line = CommandText.clickable(
-                    Component.text(" " + key, NamedTextColor.WHITE),
+            Component line = errors > 0
+                    ? HyperionMessages.VALIDATE__ENTRY_ERRORS.component(value("model", key), value("count", errors))
+                    : HyperionMessages.VALIDATE__ENTRY_WARNINGS.component(
+                            value("model", key),
+                            value("count", report.count(IssueSeverity.WARNING))
+                    );
+            lines.appendNewline().append(CommandText.clickable(
+                    line,
                     "/hyperion validate " + key,
-                    "Show every issue"
-            );
-            lines.appendNewline().append(line.append(counts));
+                    HyperionMessages.VALIDATE__ENTRY_HOVER.component()
+            ));
         }
 
         if (withIssues == 0) {
-            int total = this.registry.reports().size();
-            String text = "All " + total + " model(s) loaded without problems.";
-            return CommandText.prefixed(Component.text(text, NamedTextColor.GREEN));
+            return HyperionMessages.VALIDATE__ALL_CLEAN.component(value("count", reports.size()));
         }
 
-        return CommandText.heading("Models with issues (" + withIssues + ")").append(lines.build());
+        return HyperionMessages.VALIDATE__HEADING.component(value("count", withIssues)).append(lines.build());
     }
 
     /**
@@ -116,22 +118,25 @@ public final class ValidateCommand {
      */
     private static Component details(final String key, final LoadReport report) {
         if (report.issues().isEmpty()) {
-            return CommandText.prefixed(Component.text(key + " loaded without problems.", NamedTextColor.GREEN));
+            return HyperionMessages.VALIDATE__MODEL_CLEAN.component(value("model", key));
         }
 
-        TextComponent.Builder message = Component.text()
-                .append(CommandText.heading(key + " (" + report.source() + ")"));
-        int shown = 0;
-        for (LoadIssue issue : report.issues()) {
-            if (shown == MAX_ISSUES) {
-                String more = " ...and " + (report.issues().size() - shown) + " more in the server log";
-                message.appendNewline().append(Component.text(more, NamedTextColor.DARK_GRAY));
+        TextComponent.Builder message = Component.text().append(HyperionMessages.VALIDATE__MODEL_HEADING.component(
+                value("model", key),
+                value("file", report.source())
+        ));
+        for (int i = 0; i < report.issues().size(); i++) {
+            if (i == MAX_ISSUES) {
+                int more = report.issues().size() - i;
+                message.appendNewline().append(HyperionMessages.VALIDATE__MORE.component(value("count", more)));
                 break;
             }
 
-            NamedTextColor color = issue.severity() == IssueSeverity.ERROR ? NamedTextColor.RED : NamedTextColor.YELLOW;
-            message.appendNewline().append(Component.text(" " + issue.describe(), color));
-            shown++;
+            LoadIssue issue = report.issues().get(i);
+            HyperionMessages line = issue.severity() == IssueSeverity.ERROR
+                    ? HyperionMessages.VALIDATE__ERROR
+                    : HyperionMessages.VALIDATE__WARNING;
+            message.appendNewline().append(line.component(value("issue", issue.describe())));
         }
 
         return message.build();
