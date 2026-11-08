@@ -121,6 +121,14 @@ near:
   standing: "on its own"
   none: "<prefix><muted>No model within <radius> blocks."
 
+# /hy animate
+animate:
+  playing: "<prefix><text>Playing <highlight><animation></highlight> on <highlight><model></highlight>."
+  stopped: "<prefix><text>Stopped <highlight><animation></highlight> on <highlight><model></highlight>."
+  stopped-all: "<prefix><text>Stopped every animation on <highlight><model></highlight>."
+  no-model: "<prefix><error>No model within <radius> blocks."
+  no-animation: "<prefix><error><model> has no animation named '<animation>'."
+
 # Mistakes when typing a command
 command:
   usage: "<prefix><error>Usage: <muted><syntax>"

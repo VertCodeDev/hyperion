@@ -6,6 +6,7 @@ package dev.vertcode.hyperion.config;
  *
  * @param viewDistance how far away, in blocks, players see a model
  * @param interpolation over how many ticks a client smooths each move of a bone
+ * @param autoAnimations whether models on entities play their idle and walk animations
  */
-public record ModelSettings(int viewDistance, int interpolation) {
+public record ModelSettings(int viewDistance, int interpolation, AutoAnimations autoAnimations) {
 }

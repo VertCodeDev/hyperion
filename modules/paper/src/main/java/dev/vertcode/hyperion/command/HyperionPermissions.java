@@ -65,6 +65,11 @@ public final class HyperionPermissions {
      */
     public static final String REMOVE = "hyperion.command.remove";
 
+    /**
+     * Play and stop animations on the nearest model, through {@code /hyperion animate}.
+     */
+    public static final String ANIMATE = "hyperion.command.animate";
+
     private HyperionPermissions() {
     }
 }

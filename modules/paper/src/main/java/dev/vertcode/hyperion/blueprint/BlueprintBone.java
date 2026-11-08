@@ -28,6 +28,7 @@ public final class BlueprintBone implements BoneBlueprint {
     private final List<BoneBlueprint> children = new ArrayList<>();
     private final Vector3fc pivot;
     private final Quaternionfc rotation;
+    private final Vector3fc angles;
     private final List<Cube> cubes;
     private final boolean visibleByDefault;
     private final Metadata metadata;
@@ -39,6 +40,7 @@ public final class BlueprintBone implements BoneBlueprint {
      * @param parent the parent, or null for a root bone
      * @param pivot the pivot in blocks, copied
      * @param rotation the rest rotation, copied
+     * @param angles the rest rotation as Blockbench's Euler angles in degrees, copied
      * @param cubes the cubes in Blockbench pixels
      * @param visibleByDefault whether the bone was visible when the model was saved
      * @param metadata the custom data on the group
@@ -48,6 +50,7 @@ public final class BlueprintBone implements BoneBlueprint {
             final @Nullable BlueprintBone parent,
             final Vector3fc pivot,
             final Quaternionfc rotation,
+            final Vector3fc angles,
             final List<Cube> cubes,
             final boolean visibleByDefault,
             final Metadata metadata
@@ -56,6 +59,7 @@ public final class BlueprintBone implements BoneBlueprint {
         this.parent = parent;
         this.pivot = new Vector3f(pivot);
         this.rotation = new Quaternionf(rotation);
+        this.angles = new Vector3f(angles);
         this.cubes = List.copyOf(cubes);
         this.visibleByDefault = visibleByDefault;
         this.metadata = metadata;
@@ -87,6 +91,15 @@ public final class BlueprintBone implements BoneBlueprint {
     @Override
     public Quaternionfc rotation() {
         return this.rotation;
+    }
+
+    /**
+     * Return the rest rotation as Blockbench's Euler angles, which animations add to.
+     *
+     * @return the angles around X, Y and Z in degrees
+     */
+    public Vector3fc angles() {
+        return this.angles;
     }
 
     @Override

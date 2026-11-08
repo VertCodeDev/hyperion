@@ -95,7 +95,7 @@ designed around that one goal:
 - [x] Blockbench model loading
 - [x] Resource pack generation
 - [x] Display entity rendering and tracking
-- [ ] Animations
+- [x] Animations
 - [ ] Timeline effects (particles, sounds, events)
 - [ ] Custom armor
 - [ ] Bedrock support

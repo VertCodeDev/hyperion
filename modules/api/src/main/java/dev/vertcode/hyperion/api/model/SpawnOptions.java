@@ -156,4 +156,15 @@ public interface SpawnOptions {
      * @throws IllegalArgumentException if the blueprint has no animation by that name
      */
     SpawnOptions animation(String name);
+
+    /**
+     * Turn the automatic idle and walk animations on or off for this model. A model on an
+     * entity plays its {@code idle} animation while the entity stands and {@code walk} while it
+     * moves, when it has them; {@code config.yml} sets the names and the default, for every
+     * entity and per entity type.
+     *
+     * @param enabled true to play them, false to leave every animation to the caller
+     * @return these options
+     */
+    SpawnOptions autoAnimations(boolean enabled);
 }

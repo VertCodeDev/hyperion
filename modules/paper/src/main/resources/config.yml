@@ -8,7 +8,16 @@ models:
   view-distance: 48
   # Over how many ticks a player's client smooths each move of a bone. 0 snaps every move;
   # higher is smoother but trails behind.
-  interpolation: 3
+  interpolation: 2
+
+  # Models on entities play these animations by themselves, when they have them: idle while
+  # the entity stands still, walk while it moves. A plugin can turn this off per model.
+  auto-animations:
+    enabled: true
+    idle: idle
+    walk: walk
+    # A choice per entity type that wins over "enabled", such as armor_stand: false.
+    entities: {}
 
 # The resource pack that holds every model.
 pack:

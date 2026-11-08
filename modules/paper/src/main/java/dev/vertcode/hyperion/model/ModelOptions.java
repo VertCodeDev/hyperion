@@ -41,6 +41,7 @@ final class ModelOptions implements SpawnOptions {
     boolean glint;
     Display.@Nullable Billboard billboard;
     @Nullable String animation;
+    @Nullable Boolean autoAnimations;
 
     /**
      * Start from the defaults.
@@ -187,6 +188,13 @@ final class ModelOptions implements SpawnOptions {
         }
 
         this.animation = name;
+
+        return this;
+    }
+
+    @Override
+    public SpawnOptions autoAnimations(final boolean enabled) {
+        this.autoAnimations = enabled;
 
         return this;
     }

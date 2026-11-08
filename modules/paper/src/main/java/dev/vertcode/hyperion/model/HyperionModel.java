@@ -1,6 +1,7 @@
 package dev.vertcode.hyperion.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -26,9 +29,14 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
+import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.animation.BonePose;
+import dev.vertcode.hyperion.animation.ModelAnimator;
+import dev.vertcode.hyperion.api.animation.AnimationHandle;
 import dev.vertcode.hyperion.api.animation.Animator;
+import dev.vertcode.hyperion.api.animation.LoopMode;
 import dev.vertcode.hyperion.api.event.ModelRemoveEvent;
 import dev.vertcode.hyperion.api.event.ModelViewerEvent;
 import dev.vertcode.hyperion.api.model.EntityAnchor;
@@ -54,6 +62,7 @@ import dev.vertcode.hyperion.api.model.view.Viewers;
 import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintBone;
 import dev.vertcode.hyperion.blueprint.BlueprintLocator;
+import dev.vertcode.hyperion.config.AutoAnimations;
 import dev.vertcode.hyperion.pack.ModelPart;
 import dev.vertcode.hyperion.pack.ResourcePack;
 import dev.vertcode.hyperion.render.BaseEntityData;
@@ -87,7 +96,9 @@ final class HyperionModel implements Model {
     private static final String NO_WORLD = "The location has no world";
     private static final String SCALE_NOT_POSITIVE = "A model scale must be above 0, got %s";
     private static final String NEGATIVE_TICKS = "Interpolation ticks must be 0 or more, got %d";
-    private static final String NO_VIEWS = "Per-player views arrive together with animations";
+    private static final double MOVE_THRESHOLD = 0.0004d;
+    private static final int STILL_TICKS = 4;
+    private static final int AUTO_FADE = 4;
     private static final String BEHAVIOR_FAILED = "The behavior %s on bone %s of %s failed";
     private static final String CREATE_FAILED = "The behavior type %s could not be created for bone %s of %s";
 
@@ -129,6 +140,23 @@ final class HyperionModel implements Model {
     private float lastScale;
     private float lastLift;
     private long ticks;
+    private final Quaternionf turn = new Quaternionf();
+    private final ModelAnimator animator;
+    private final Map<UUID, HyperionPlayerView> views = new ConcurrentHashMap<>();
+    private final @Nullable String startAnimation;
+    private volatile boolean autoAnimations;
+    private BonePose[] poses = new BonePose[0];
+    private Matrix4f[] matrices = new Matrix4f[0];
+    private Matrix4f[] viewMatrices = new Matrix4f[0];
+    private int[] parentIndex = new int[0];
+    private Map<String, Integer> boneIndex = Map.of();
+    private @Nullable AnimationHandle autoPlaying;
+    private boolean animatedBefore;
+    private boolean moving;
+    private boolean lookChangedThisFrame;
+    private int stillTicks = STILL_TICKS;
+    private double lastX;
+    private double lastZ;
 
     /**
      * Build a model. Nothing is scheduled or sent until {@link #start()}.
@@ -167,10 +195,18 @@ final class HyperionModel implements Model {
         this.hiddenParts = this.entity == null ? EntityPart.NONE : Set.copyOf(options.hiddenParts);
         this.buildBones(blueprint, false);
         this.buildDisplays();
+        this.animator = this.newAnimator(null);
+        this.startAnimation = options.animation;
+        Boolean auto = options.autoAnimations;
+        this.autoAnimations = this.entity != null
+                && (auto != null ? auto : manager.settings().autoAnimations().enabledFor(this.entity.getType()));
+        this.lastX = this.origin.getX();
+        this.lastZ = this.origin.getZ();
     }
 
     /**
-     * Start the frames and tell every behavior the model spawned. Call on the owning thread.
+     * Start the frames, tell every behavior the model spawned, and play the animation the spawn
+     * options asked for. Call on the owning thread.
      */
     void start() {
         this.schedule();
@@ -178,6 +214,10 @@ final class HyperionModel implements Model {
             for (BoneBehavior behavior : bone.behaviors()) {
                 this.runBehavior(bone, behavior, BoneBehavior::onSpawn);
             }
+        }
+
+        if (this.startAnimation != null) {
+            this.animator.play(this.startAnimation);
         }
     }
 
@@ -205,12 +245,57 @@ final class HyperionModel implements Model {
             return;
         }
 
+        this.autoAnimate(here);
+        this.animator.tick();
+        for (HyperionPlayerView view : this.views.values()) {
+            view.modelAnimator().tick();
+        }
+
         this.updateViewers(here);
         if (this.viewers.isEmpty()) {
             return;
         }
 
         this.render(here);
+    }
+
+    /**
+     * Play the idle animation while the entity stands and the walk animation while it moves,
+     * when automatic animations are on and the model has them. The entity counts as standing
+     * after a few ticks without moving, so a mob that steps now and then does not flicker
+     * between the two.
+     *
+     * @param here where the entity is
+     */
+    private void autoAnimate(final Location here) {
+        if (!this.autoAnimations) {
+            return;
+        }
+
+        double dx = here.getX() - this.lastX;
+        double dz = here.getZ() - this.lastZ;
+        this.lastX = here.getX();
+        this.lastZ = here.getZ();
+        this.stillTicks = dx * dx + dz * dz > MOVE_THRESHOLD ? 0 : this.stillTicks + 1;
+        AutoAnimations names = this.manager.settings().autoAnimations();
+        Set<String> available = this.blueprint.animations();
+        String wanted = this.stillTicks < STILL_TICKS && available.contains(names.walk()) ? names.walk() : names.idle();
+        if (!available.contains(wanted)) {
+            wanted = null;
+        }
+
+        AnimationHandle current = this.autoPlaying;
+        if (current != null && current.isPlaying() && current.name().equals(wanted)) {
+            return;
+        }
+
+        if (current != null) {
+            current.stop();
+        }
+
+        this.autoPlaying = wanted == null
+                ? null
+                : this.animator.play(wanted, options -> options.loop(LoopMode.LOOP).fadeIn(AUTO_FADE).fadeOut(AUTO_FADE));
     }
 
     /**
@@ -339,15 +424,21 @@ final class HyperionModel implements Model {
 
     /**
      * Work out every display and send each viewer what changed, and new viewers everything.
+     * A viewer whose view changes something is rendered on their own.
      *
      * @param here where the model is
      */
     private void render(final Location here) {
+        this.moving = false;
+        this.lookChangedThisFrame = false;
         this.syncItemDisplays();
         this.updateItems();
         boolean everything = !this.joined.isEmpty() || !this.respawn.isEmpty() || !this.added.isEmpty();
-        if (everything || this.needsMove()) {
-            this.computeTransforms();
+        boolean animated = this.animator.active() || this.animatedBefore;
+        this.animatedBefore = this.animator.active();
+        if (everything || animated || this.needsMove()) {
+            this.computePoses(this.poses, null);
+            this.computeTransforms(this.poses, null, this.matrices, PartDisplay::transform);
         }
 
         if (everything || this.lookDirty) {
@@ -355,7 +446,8 @@ final class HyperionModel implements Model {
             this.computeLooks();
         }
 
-        List<PacketWrapper<?>> common = this.changes(here);
+        List<PacketWrapper<?>> structure = this.structure(here);
+        List<PacketWrapper<?>> shared = this.changes();
         boolean hidden = this.hiddenDirty;
         this.hiddenDirty = false;
         boolean restructured = !this.added.isEmpty() || !this.dropped.isEmpty();
@@ -364,11 +456,17 @@ final class HyperionModel implements Model {
                 continue;
             }
 
-            for (PacketWrapper<?> packet : common) {
+            for (PacketWrapper<?> packet : structure) {
                 Packets.send(viewer.user(), packet);
             }
 
-            this.sendViewerItems(viewer);
+            HyperionPlayerView view = this.views.get(viewer.player().getUniqueId());
+            if (view != null && view.active()) {
+                this.renderView(viewer, view, here, false);
+            } else {
+                this.renderShared(viewer, view, shared, here);
+            }
+
             if (this.entity != null && restructured) {
                 int[] riders = this.manager.passengers(this.entity, viewer.player().getUniqueId());
                 Packets.send(viewer.user(), Packets.passengers(this.entity.getEntityId(), riders));
@@ -397,6 +495,175 @@ final class HyperionModel implements Model {
         this.added.clear();
         this.dropped.clear();
         this.teleported = false;
+    }
+
+    /**
+     * Send a viewer who sees what everyone sees this frame's shared changes. A viewer who was
+     * rendered on their own until now gets the whole shared state back first.
+     *
+     * @param viewer the viewer
+     * @param view the viewer's view, or null without one
+     * @param shared the shared changes
+     * @param here where the model is
+     */
+    private void renderShared(
+            final Viewer viewer,
+            final @Nullable HyperionPlayerView view,
+            final List<PacketWrapper<?>> shared,
+            final Location here
+    ) {
+        boolean resync = view != null && view.rendered();
+        if (view != null) {
+            view.rendered(false);
+        }
+
+        for (PartDisplay display : this.displays) {
+            if (this.added.contains(display)) {
+                Packets.send(viewer.user(), Packets.spawn(display.entityId(), display.uniqueId(), here));
+                Packets.send(viewer.user(), Packets.metadata(display.entityId(), this.spawnData(display, this.itemFor(display, viewer))));
+            } else if (resync) {
+                Packets.send(viewer.user(), Packets.metadata(display.entityId(), this.fullData(display, this.itemFor(display, viewer))));
+            }
+        }
+
+        if (!resync) {
+            for (PacketWrapper<?> packet : shared) {
+                Packets.send(viewer.user(), packet);
+            }
+        }
+
+        this.sendViewerItems(viewer);
+    }
+
+    /**
+     * Render one viewer on their own: their animations and overrides on top of the shared
+     * state, compared with what they were last sent.
+     *
+     * @param viewer the viewer
+     * @param view the viewer's view
+     * @param here where the model is
+     * @param spawn true to spawn every display for them, as for a new viewer
+     */
+    private void renderView(final Viewer viewer, final HyperionPlayerView view, final Location here, final boolean spawn) {
+        if (!view.rendered()) {
+            view.rendered(true);
+            if (!spawn) {
+                for (PartDisplay display : this.displays) {
+                    if (!this.added.contains(display)) {
+                        view.seed(display, this.itemFor(display, viewer));
+                    }
+                }
+            }
+        }
+
+        boolean moveDirty = view.takeMoveDirty();
+        boolean animated = view.modelAnimator().active() || view.animatedBefore();
+        view.animatedBefore(view.modelAnimator().active());
+        Map<PartDisplay, DisplayTransform> own = view.transforms();
+        if (animated || view.movesBones()) {
+            if (moveDirty || animated || this.moving) {
+                BonePose[] viewPoses = view.poses(this.bones.size());
+                this.computePoses(viewPoses, view.modelAnimator());
+                this.computeTransforms(viewPoses, view, this.viewMatrices, own::put);
+            }
+        } else {
+            own.clear();
+        }
+
+        boolean restyle = view.takeLookDirty() || this.lookChangedThisFrame || spawn;
+        PartItems items = this.manager.items();
+        for (HyperionBone bone : this.bones) {
+            DisplayLook look = this.lookOf(bone, view);
+            HyperionViewBone override = view.existing(bone.name());
+            ItemSource source = override != null && override.itemSourceOverride() != null
+                    ? override.itemSourceOverride()
+                    : bone.itemSource();
+            DisplayLook partLook = source == null ? look : hidden(look);
+            for (PartDisplay display : bone.displays()) {
+                DisplayLook before = view.sentLooks().get(display);
+                ItemStack item = null;
+                if (restyle || before == null || partLook.itemDiffers(before)) {
+                    item = items.part(Objects.requireNonNull(display.part()), partLook);
+                }
+
+                this.sendView(viewer, view, display, own.getOrDefault(display, display.transform()), partLook, item, spawn, here);
+            }
+
+            PartDisplay itemDisplay = bone.itemDisplay();
+            if (itemDisplay == null) {
+                continue;
+            }
+
+            ItemStack item = null;
+            boolean due = source != null && this.ticks % source.interval() == 0;
+            if (restyle || due || !view.sentItems().containsKey(itemDisplay)) {
+                // Bukkit's ItemStack is qualified: this class sends PacketEvents' ItemStack, of the same name.
+                org.bukkit.inventory.ItemStack picked = source == null ? null : source.item(new ItemContext(bone, viewer.player()));
+                item = items.given(picked, look);
+                if (override != null) {
+                    override.shownItem(picked);
+                }
+            }
+
+            this.sendView(viewer, view, itemDisplay, own.getOrDefault(itemDisplay, itemDisplay.transform()), look, item, spawn, here);
+        }
+    }
+
+    /**
+     * Send one display to a viewer rendered on their own: everything when it spawns for them,
+     * else only what differs from what they were last sent.
+     *
+     * @param viewer the viewer
+     * @param view the viewer's view, which keeps what they were sent
+     * @param display the display
+     * @param transform where the display is for them
+     * @param look how it looks for them
+     * @param item the item they see, or null when it did not have to be built again
+     * @param spawn true to spawn it for them
+     * @param here where the model is
+     */
+    private void sendView(
+            final Viewer viewer,
+            final HyperionPlayerView view,
+            final PartDisplay display,
+            final @Nullable DisplayTransform transform,
+            final DisplayLook look,
+            final @Nullable ItemStack item,
+            final boolean spawn,
+            final Location here
+    ) {
+        if (transform == null) {
+            return;
+        }
+
+        List<EntityData<?>> data = new ArrayList<>();
+        boolean fresh = spawn || this.added.contains(display);
+        ItemStack shown = item != null ? item : view.sentItems().getOrDefault(display, ItemStack.EMPTY);
+        if (fresh) {
+            Packets.send(viewer.user(), Packets.spawn(display.entityId(), display.uniqueId(), here));
+            DisplayData.spawn(data, transform, look, shown, this.interpolation, this.viewers.viewDistance());
+        } else {
+            DisplayTransform sentTransform = view.sentTransforms().get(display);
+            if (sentTransform == null || !transform.closeTo(sentTransform, EPSILON)) {
+                DisplayData.transform(data, transform, this.interpolation);
+            }
+
+            DisplayLook sentLook = view.sentLooks().get(display);
+            if (sentLook == null || look.styleDiffers(sentLook)) {
+                DisplayData.look(data, look);
+            }
+
+            if (item != null && !Objects.equals(item, view.sentItems().get(display))) {
+                DisplayData.item(data, item);
+            }
+        }
+
+        view.sentTransforms().put(display, transform);
+        view.sentLooks().put(display, look);
+        view.sentItems().put(display, shown);
+        if (!data.isEmpty()) {
+            Packets.send(viewer.user(), Packets.metadata(display.entityId(), data));
+        }
     }
 
     /**
@@ -433,44 +700,105 @@ final class HyperionModel implements Model {
     }
 
     /**
-     * Work out the matrix of every bone and the transform of every display.
+     * Work out what the playing animations do to every bone.
+     *
+     * @param into the poses, one per bone
+     * @param extra a viewer's own animator, added on top of the shared one, or null
      */
-    private void computeTransforms() {
-        this.moveDirty = false;
-        this.lastRotation = this.rotation;
-        this.lastScale = this.scale;
-        this.lastLift = this.lift();
+    private void computePoses(final BonePose[] into, final @Nullable ModelAnimator extra) {
+        for (BonePose pose : into) {
+            pose.reset();
+        }
+
+        this.animator.apply(this.boneIndex, into);
+        if (extra != null) {
+            extra.apply(this.boneIndex, into);
+        }
+    }
+
+    /**
+     * Work out the matrix of every bone and the transform of every display. The shared pass also
+     * runs the bones' modifiers and publishes where each bone is.
+     *
+     * @param poses what the animations do to each bone
+     * @param view the viewer this pass is for, or null for the shared pass
+     * @param matrices where the bones' matrices go, one per bone
+     * @param sink where each display's transform goes
+     */
+    private void computeTransforms(
+            final BonePose[] poses,
+            final @Nullable HyperionPlayerView view,
+            final Matrix4f[] matrices,
+            final BiConsumer<PartDisplay, DisplayTransform> sink
+    ) {
+        boolean shared = view == null;
+        if (shared) {
+            this.moving = true;
+            this.moveDirty = false;
+            this.lastRotation = this.rotation;
+            this.lastScale = this.scale;
+            this.lastLift = this.lift();
+        }
+
         ModelSpace.root(this.root, this.rotation, this.scale, this.transform);
-        this.rootWorld = new Matrix4f(this.root);
-        for (HyperionBone bone : this.bones) {
-            HyperionBone parent = bone.parentBone();
-            Matrix4fc parentMatrix = parent == null ? IDENTITY : parent.matrix();
+        if (shared) {
+            this.rootWorld = new Matrix4f(this.root);
+        }
+
+        List<HyperionBone> all = this.bones;
+        for (int i = 0; i < all.size(); i++) {
+            HyperionBone bone = all.get(i);
+            int parent = this.parentIndex[i];
+            Matrix4fc parentMatrix = parent < 0 ? IDENTITY : matrices[parent];
             BlueprintBone shape = bone.blueprintBone();
-            ModelSpace.bone(bone.matrix(), parentMatrix, shape.pivot(), shape.rotation(), bone.frameTransform());
-            bone.world(new Matrix4f(this.root).mul(bone.matrix()));
+            BoneTransform extra = view == null ? bone.frameTransform() : viewTransform(bone, view);
+            if (view == null) {
+                bone.lastTransform(extra);
+            }
+
+            ModelSpace.bone(matrices[i], parentMatrix, shape.pivot(), shape.angles(), poses[i], extra, this.turn);
+            if (view == null) {
+                bone.world(new Matrix4f(this.root).mul(matrices[i]));
+            }
+
             for (PartDisplay display : bone.displays()) {
                 ModelPart part = Objects.requireNonNull(display.part());
-                ModelSpace.part(this.scratch, this.root, bone.matrix(), shape.pivot(), part);
-                display.transform(DisplayTransform.of(this.scratch.translateLocal(0f, -this.lastLift, 0f)));
+                ModelSpace.part(this.scratch, this.root, matrices[i], shape.pivot(), part);
+                sink.accept(display, DisplayTransform.of(this.scratch.translateLocal(0f, -this.lastLift, 0f)));
             }
 
             PartDisplay item = bone.itemDisplay();
             if (item != null) {
-                ModelSpace.item(this.scratch, this.root, bone.matrix(), shape.pivot());
-                item.transform(DisplayTransform.of(this.scratch.translateLocal(0f, -this.lastLift, 0f)));
+                ModelSpace.item(this.scratch, this.root, matrices[i], shape.pivot());
+                sink.accept(item, DisplayTransform.of(this.scratch.translateLocal(0f, -this.lastLift, 0f)));
             }
         }
+    }
+
+    /**
+     * Return a bone's transform for one viewer: theirs when set, else this frame's shared one.
+     *
+     * @param bone the bone
+     * @param view the viewer's view
+     * @return the transform
+     */
+    private static BoneTransform viewTransform(final HyperionBone bone, final HyperionPlayerView view) {
+        HyperionViewBone override = view.existing(bone.name());
+        BoneTransform own = override == null ? null : override.transformOverride();
+
+        return own != null ? own : bone.lastTransform();
     }
 
     /**
      * Work out how every display looks, and build the items whose look changed.
      */
     private void computeLooks() {
+        this.lookChangedThisFrame = true;
         PartItems items = this.manager.items();
         for (HyperionBone bone : this.bones) {
-            DisplayLook look = this.lookOf(bone);
+            DisplayLook look = this.lookOf(bone, null);
             PartDisplay item = bone.itemDisplay();
-            DisplayLook partLook = item == null ? look : hidden(look);
+            DisplayLook partLook = bone.itemSource() == null ? look : hidden(look);
             for (PartDisplay display : bone.displays()) {
                 DisplayLook previous = display.look();
                 display.look(partLook);
@@ -500,29 +828,93 @@ final class HyperionModel implements Model {
     }
 
     /**
-     * Combine a bone's look with the model's: a bone shows when both do, glows or shimmers when
-     * either does, and its own tint, glow color, billboard and light win over the model's.
+     * Combine a bone's look with the model's, and a viewer's overrides over both: a bone shows
+     * when both do, glows or shimmers when either does, and its own tint, glow color, billboard
+     * and light win over the model's.
      *
      * @param bone the bone
+     * @param view the viewer's view, or null for the shared look
      * @return the look
      */
-    private DisplayLook lookOf(final HyperionBone bone) {
-        LookState own = bone.look();
-        @Nullable Color tint = own.tint();
-        @Nullable Color glowColor = own.glowColor();
-        Display.@Nullable Billboard billboard = own.billboard();
-        Display.@Nullable Brightness brightness = own.brightness();
-        Display.@Nullable Billboard modelBillboard = this.look.billboard();
+    private DisplayLook lookOf(final HyperionBone bone, final @Nullable HyperionPlayerView view) {
+        LookState shared = bone.look();
+        ViewLook model = view == null ? null : view.look();
+        HyperionViewBone override = view == null ? null : view.existing(bone.name());
+        ViewLook own = override == null ? null : override.look();
+
+        boolean modelVisible = pick(model == null ? null : model.visible(), this.look.visible());
+        boolean boneVisible = pick(own == null ? null : own.visible(), shared.visible());
+        boolean modelGlint = pick(model == null ? null : model.glint(), this.look.glint());
+        boolean boneGlint = pick(own == null ? null : own.glint(), shared.glint());
+        boolean modelGlowing = pick(model == null ? null : model.glowing(), this.look.glowing());
+        boolean boneGlowing = pick(own == null ? null : own.glowing(), shared.glowing());
+        Color tint = first(own == null ? null : own.tint(), shared.tint(), model == null ? null : model.tint(), this.look.tint());
+        Color glowColor = first(
+                own == null ? null : own.glowColor(),
+                shared.glowColor(),
+                model == null ? null : model.glowColor(),
+                this.look.glowColor()
+        );
+        Display.Billboard billboard = first(
+                own == null ? null : own.billboard(),
+                shared.billboard(),
+                model == null ? null : model.billboard(),
+                this.look.billboard()
+        );
+        Display.Brightness brightness = first(
+                own == null ? null : own.brightness(),
+                shared.brightness(),
+                model == null ? null : model.brightness(),
+                this.look.brightness()
+        );
 
         return new DisplayLook(
-                this.look.visible() && own.visible(),
-                tint != null ? tint : this.look.tint(),
-                this.look.glint() || own.glint(),
-                this.look.glowing() || own.glowing(),
-                glowColor != null ? glowColor : this.look.glowColor(),
-                billboard != null ? billboard : modelBillboard != null ? modelBillboard : Display.Billboard.FIXED,
-                brightness != null ? brightness : this.look.brightness()
+                modelVisible && boneVisible,
+                tint,
+                modelGlint || boneGlint,
+                modelGlowing || boneGlowing,
+                glowColor,
+                billboard == null ? Display.Billboard.FIXED : billboard,
+                brightness
         );
+    }
+
+    /**
+     * Return an override when set, else the shared value.
+     *
+     * @param override the override, or null when unset
+     * @param shared the shared value
+     * @return the value
+     */
+    private static boolean pick(final @Nullable Boolean override, final boolean shared) {
+        return override != null ? override : shared;
+    }
+
+    /**
+     * Return the first value that is set.
+     *
+     * @param first the strongest value, or null
+     * @param second the next, or null
+     * @param third the next, or null
+     * @param fourth the weakest, or null
+     * @param <T> the value's type
+     * @return the first set value, or null when none is
+     */
+    private static <T> @Nullable T first(
+            final @Nullable T first,
+            final @Nullable T second,
+            final @Nullable T third,
+            final @Nullable T fourth
+    ) {
+        if (first != null) {
+            return first;
+        }
+
+        if (second != null) {
+            return second;
+        }
+
+        return third != null ? third : fourth;
     }
 
     /**
@@ -544,12 +936,13 @@ final class HyperionModel implements Model {
     }
 
     /**
-     * Build the packets every viewer who already sees the model needs this frame.
+     * Build the packets every viewer who already sees the model needs, whatever their view:
+     * displays that went, and moves of a model on its own.
      *
      * @param here where the model is
      * @return the packets, in order
      */
-    private List<PacketWrapper<?>> changes(final Location here) {
+    private List<PacketWrapper<?>> structure(final Location here) {
         List<PacketWrapper<?>> packets = new ArrayList<>();
         if (!this.dropped.isEmpty()) {
             int[] ids = new int[this.dropped.size()];
@@ -560,10 +953,26 @@ final class HyperionModel implements Model {
             packets.add(Packets.destroy(ids));
         }
 
+        if (this.teleported && this.entity == null) {
+            for (PartDisplay display : this.displays) {
+                if (!this.added.contains(display)) {
+                    packets.add(Packets.teleport(display.entityId(), here));
+                }
+            }
+        }
+
+        return packets;
+    }
+
+    /**
+     * Build the shared changes of the displays every viewer already has.
+     *
+     * @return the packets
+     */
+    private List<PacketWrapper<?>> changes() {
+        List<PacketWrapper<?>> packets = new ArrayList<>();
         for (PartDisplay display : this.displays) {
             if (this.added.contains(display)) {
-                packets.add(Packets.spawn(display.entityId(), display.uniqueId(), here));
-                packets.add(Packets.metadata(display.entityId(), this.spawnData(display, display.item())));
                 continue;
             }
 
@@ -584,12 +993,6 @@ final class HyperionModel implements Model {
 
             if (!data.isEmpty()) {
                 packets.add(Packets.metadata(display.entityId(), data));
-            }
-        }
-
-        if (this.teleported && this.entity == null) {
-            for (PartDisplay display : this.displays) {
-                packets.add(Packets.teleport(display.entityId(), here));
             }
         }
 
@@ -618,16 +1021,43 @@ final class HyperionModel implements Model {
     }
 
     /**
+     * Build the whole shared state of a display a viewer already has, for a viewer leaving
+     * their own render.
+     *
+     * @param display the display
+     * @param item the item this viewer sees on it
+     * @return the data
+     */
+    private List<EntityData<?>> fullData(final PartDisplay display, final ItemStack item) {
+        List<EntityData<?>> data = new ArrayList<>();
+        DisplayData.transform(data, Objects.requireNonNull(display.transform()), this.interpolation);
+        DisplayData.look(data, Objects.requireNonNull(display.look()));
+        DisplayData.item(data, item);
+
+        return data;
+    }
+
+    /**
      * Send a viewer every display, and on an entity, mount them and hide the entity's parts.
      *
      * @param viewer the viewer
      * @param here where the model is
      */
     private void spawnFor(final Viewer viewer, final Location here) {
-        for (PartDisplay display : this.displays) {
-            Packets.send(viewer.user(), Packets.spawn(display.entityId(), display.uniqueId(), here));
-            ItemStack item = this.itemFor(display, viewer);
-            Packets.send(viewer.user(), Packets.metadata(display.entityId(), this.spawnData(display, item)));
+        HyperionPlayerView view = this.views.get(viewer.player().getUniqueId());
+        if (view != null && view.active()) {
+            view.rendered(false);
+            this.renderView(viewer, view, here, true);
+        } else {
+            if (view != null) {
+                view.rendered(false);
+            }
+
+            for (PartDisplay display : this.displays) {
+                Packets.send(viewer.user(), Packets.spawn(display.entityId(), display.uniqueId(), here));
+                ItemStack item = this.itemFor(display, viewer);
+                Packets.send(viewer.user(), Packets.metadata(display.entityId(), this.spawnData(display, item)));
+            }
         }
 
         if (this.entity != null) {
@@ -675,7 +1105,7 @@ final class HyperionModel implements Model {
     private ItemStack itemFor(final PartDisplay display, final Viewer viewer) {
         HyperionBone bone = this.boneOf(display);
         @Nullable ItemSource source = bone == null ? null : bone.itemSource();
-        if (bone == null || source == null || !source.perViewer()) {
+        if (bone == null || source == null || !source.perViewer() || display.part() != null) {
             return display.item();
         }
 
@@ -732,21 +1162,21 @@ final class HyperionModel implements Model {
     }
 
     /**
-     * Give each bone with an item source an item display, and take it from a bone that lost its
-     * source.
+     * Give a bone an item display while it, or any player's view of it, has an item source,
+     * and take it away once none has.
      */
     private void syncItemDisplays() {
         for (HyperionBone bone : this.bones) {
-            ItemSource source = bone.itemSource();
+            boolean wanted = this.wantsItem(bone);
             PartDisplay display = bone.itemDisplay();
-            if (source != null && display == null) {
+            if (wanted && display == null) {
                 PartDisplay created = new PartDisplay(null);
                 bone.itemDisplay(created);
                 bone.markItemDirty();
                 this.displays.add(created);
                 this.added.add(created);
                 this.lookDirty = true;
-            } else if (source == null && display != null) {
+            } else if (!wanted && display != null) {
                 bone.itemDisplay(null);
                 this.displays.remove(display);
                 this.dropped.add(display);
@@ -757,6 +1187,28 @@ final class HyperionModel implements Model {
         if (!this.added.isEmpty() || !this.dropped.isEmpty()) {
             this.displayIds = ids(this.displays);
         }
+    }
+
+    /**
+     * Return whether a bone needs an item display: it has an item source, or a player's view of
+     * it does.
+     *
+     * @param bone the bone
+     * @return true when it needs one
+     */
+    private boolean wantsItem(final HyperionBone bone) {
+        if (bone.itemSource() != null) {
+            return true;
+        }
+
+        for (HyperionPlayerView view : this.views.values()) {
+            HyperionViewBone override = view.existing(bone.name());
+            if (override != null && override.itemSourceOverride() != null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -866,6 +1318,7 @@ final class HyperionModel implements Model {
 
         this.bones = List.copyOf(byName.values());
         this.bonesByName = Map.copyOf(byName);
+        this.index(this.bones);
         this.locators = this.buildLocators(next, byName);
         for (HyperionBone bone : created) {
             bone.behaviors(this.createBehaviors(bone));
@@ -875,6 +1328,34 @@ final class HyperionModel implements Model {
                 }
             }
         }
+    }
+
+    /**
+     * Size the per-bone arrays to the bones and note where each bone and its parent are.
+     *
+     * @param all the bones, parents first
+     */
+    private void index(final List<HyperionBone> all) {
+        int count = all.size();
+        Map<String, Integer> indexes = new HashMap<>();
+        this.poses = new BonePose[count];
+        this.matrices = new Matrix4f[count];
+        this.viewMatrices = new Matrix4f[count];
+        this.parentIndex = new int[count];
+        for (int i = 0; i < count; i++) {
+            indexes.put(all.get(i).name(), i);
+            this.poses[i] = new BonePose();
+            this.matrices[i] = new Matrix4f();
+            this.viewMatrices[i] = new Matrix4f();
+        }
+
+        for (int i = 0; i < count; i++) {
+            HyperionBone parent = all.get(i).parentBone();
+            Integer at = parent == null ? null : indexes.get(parent.name());
+            this.parentIndex[i] = at == null ? -1 : at;
+        }
+
+        this.boneIndex = Map.copyOf(indexes);
     }
 
     /**
@@ -974,6 +1455,11 @@ final class HyperionModel implements Model {
         if (next != this.blueprint) {
             this.blueprint = next;
             this.buildBones(next, true);
+            this.animator.rebind();
+            for (HyperionPlayerView view : this.views.values()) {
+                view.modelAnimator().rebind();
+                view.rendered(false);
+            }
         }
 
         this.pack = nextPack;
@@ -1011,6 +1497,8 @@ final class HyperionModel implements Model {
             }
         }
 
+        this.animator.clear();
+        this.views.clear();
         this.manager.forget(this);
         Bukkit.getPluginManager().callEvent(new ModelRemoveEvent(this, reason));
     }
@@ -1137,6 +1625,7 @@ final class HyperionModel implements Model {
     void lose(final UUID player, final boolean left) {
         if (left) {
             this.viewers.forget(player);
+            this.views.remove(player);
         } else {
             this.viewers.remove(player);
         }
@@ -1144,6 +1633,26 @@ final class HyperionModel implements Model {
         for (PartDisplay display : List.copyOf(this.displays)) {
             display.viewerItems().remove(player);
         }
+    }
+
+    /**
+     * Make an animator for this model's baked animations, following reloads.
+     *
+     * @param viewer the player it plays for, or null for everyone
+     * @return the animator
+     */
+    ModelAnimator newAnimator(final @Nullable Player viewer) {
+        return new ModelAnimator(this, name -> this.blueprint.baked(name), viewer, this.manager.plugin().getLogger());
+    }
+
+    /**
+     * Find a bone by name.
+     *
+     * @param name the bone's name
+     * @return the bone, or null when there is none by that name
+     */
+    @Nullable HyperionBone boneNamed(final String name) {
+        return this.bonesByName.get(name);
     }
 
     /**
@@ -1424,12 +1933,33 @@ final class HyperionModel implements Model {
 
     @Override
     public PlayerView view(final Player player) {
-        throw new UnsupportedOperationException(NO_VIEWS);
+        return this.views.computeIfAbsent(player.getUniqueId(), id -> new HyperionPlayerView(this, player));
     }
 
     @Override
     public Animator animator() {
-        return PendingAnimator.INSTANCE;
+        return this.animator;
+    }
+
+    @Override
+    public boolean autoAnimations() {
+        return this.autoAnimations;
+    }
+
+    @Override
+    public Model autoAnimations(final boolean enabled) {
+        if (this.entity == null) {
+            return this;
+        }
+
+        this.autoAnimations = enabled;
+        AnimationHandle current = this.autoPlaying;
+        if (!enabled && current != null) {
+            current.stop();
+            this.autoPlaying = null;
+        }
+
+        return this;
     }
 
     @Override

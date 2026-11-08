@@ -97,7 +97,8 @@ public final class HyperionCommands {
                 new PackStatusCommand(packs),
                 new PackExportCommand(plugin, packs),
                 new SpawnCommand(plugin, registry, packs),
-                new RemoveCommand(models)
+                new RemoveCommand(models),
+                new AnimateCommand(models)
         );
     }
 

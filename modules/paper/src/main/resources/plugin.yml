@@ -24,6 +24,7 @@ permissions:
       hyperion.command.pack.export: true
       hyperion.command.spawn: true
       hyperion.command.remove: true
+      hyperion.command.animate: true
   hyperion.command.help:
     description: See the Hyperion help menu.
     default: op
@@ -56,4 +57,7 @@ permissions:
     default: op
   hyperion.command.remove:
     description: List the models nearby and remove them.
+    default: op
+  hyperion.command.animate:
+    description: Play and stop animations on the nearest model.
     default: op

@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 
+import dev.vertcode.hyperion.api.animation.Animator;
 import dev.vertcode.hyperion.api.model.Appearance;
 import dev.vertcode.hyperion.api.model.Model;
 
@@ -42,7 +43,16 @@ public interface PlayerView extends Appearance<PlayerView> {
     Optional<ViewBone> bone(String name);
 
     /**
-     * Drop every override in this view, so the player sees what everyone sees.
+     * Return the animator for this player only. What it plays adds to what the model plays for
+     * everyone, and only this player sees it.
+     *
+     * @return the player's animator
+     */
+    Animator animator();
+
+    /**
+     * Drop every override in this view and stop its animations, so the player sees what
+     * everyone sees.
      */
     void reset();
 }

@@ -248,6 +248,22 @@ public interface Model extends Appearance<Model> {
     Animator animator();
 
     /**
+     * Return whether the model plays its idle and walk animations by itself.
+     *
+     * @return true when it does; always false for a model on its own
+     */
+    boolean autoAnimations();
+
+    /**
+     * Turn the automatic idle and walk animations on or off. Turning them off stops the one
+     * playing. Has no effect on a model on its own, which never moves by itself.
+     *
+     * @param enabled true to play them
+     * @return this model
+     */
+    Model autoAnimations(boolean enabled);
+
+    /**
      * Return whether this model has been removed.
      *
      * @return true once removed

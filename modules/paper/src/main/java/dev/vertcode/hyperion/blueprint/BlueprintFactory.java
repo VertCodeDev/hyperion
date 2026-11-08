@@ -15,6 +15,8 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.animation.AnimationBaker;
+import dev.vertcode.hyperion.animation.BakedAnimation;
 import dev.vertcode.hyperion.api.model.source.ModelSource;
 import dev.vertcode.hyperion.blueprint.data.Animation;
 import dev.vertcode.hyperion.blueprint.data.Cube;
@@ -45,6 +47,7 @@ final class BlueprintFactory {
     private final LoadReport report;
     private final Vector3fc shift;
     private final Map<String, BlueprintBone> bones = new LinkedHashMap<>();
+    private final Map<String, String> bonesByGroup = new LinkedHashMap<>();
     private final Map<String, Vector3fc> pivotsInPixels = new LinkedHashMap<>();
     private final Map<String, BlueprintLocator> locators = new LinkedHashMap<>();
     private final Vector3f min = new Vector3f(Float.POSITIVE_INFINITY);
@@ -79,6 +82,11 @@ final class BlueprintFactory {
     ) {
         BlueprintFactory factory = new BlueprintFactory(data, report);
         factory.walk(data.roots(), null, new Matrix4f());
+        Map<String, Animation> animations = factory.animations();
+        Map<String, BakedAnimation> baked = new LinkedHashMap<>();
+        for (Map.Entry<String, Animation> entry : animations.entrySet()) {
+            baked.put(entry.getKey(), AnimationBaker.bake(entry.getKey(), entry.getValue(), factory.bonesByGroup, report));
+        }
 
         return new Blueprint(
                 key,
@@ -88,7 +96,8 @@ final class BlueprintFactory {
                 data,
                 factory.bones,
                 factory.locators,
-                factory.animations(),
+                animations,
+                baked,
                 factory.boundingBox(),
                 report,
                 spawner
@@ -134,6 +143,7 @@ final class BlueprintFactory {
                 null,
                 new Vector3f(),
                 new Quaternionf(),
+                new Vector3f(),
                 looseCubes,
                 true,
                 JsonMetadata.EMPTY
@@ -167,11 +177,13 @@ final class BlueprintFactory {
                 parent,
                 new Vector3f(pivot).div(PIXELS_PER_BLOCK),
                 rotation,
+                group.rotation(),
                 cubes,
                 group.visible(),
                 group.metadata()
         );
         this.bones.put(name, bone);
+        this.bonesByGroup.put(group.uuid(), name);
         this.pivotsInPixels.put(name, pivot);
 
         // Blockbench nests a group around its own origin: children turn with it at rest.

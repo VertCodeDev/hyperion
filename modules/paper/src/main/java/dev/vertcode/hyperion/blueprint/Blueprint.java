@@ -16,6 +16,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.animation.BakedAnimation;
 import dev.vertcode.hyperion.api.model.EntityAnchor;
 import dev.vertcode.hyperion.api.model.LocationAnchor;
 import dev.vertcode.hyperion.api.model.Model;
@@ -52,6 +53,7 @@ public final class Blueprint implements ModelBlueprint {
     private final List<LocatorBlueprint> apiLocators;
     private final Map<String, BlueprintLocator> locatorsByName;
     private final Map<String, Animation> animations;
+    private final Map<String, BakedAnimation> baked;
     private final BoundingBox boundingBox;
     private final LoadReport report;
     private final ModelSpawner spawner;
@@ -67,6 +69,7 @@ public final class Blueprint implements ModelBlueprint {
      * @param bones every bone, parents first
      * @param locators every locator
      * @param animations every animation, by unique name
+     * @param baked every animation baked for playing, by the same names
      * @param boundingBox the box around every cube at rest, in blocks
      * @param report the problems found while loading
      * @param spawner what {@link #spawn} and {@link #attach} hand the work to
@@ -80,6 +83,7 @@ public final class Blueprint implements ModelBlueprint {
             final Map<String, BlueprintBone> bones,
             final Map<String, BlueprintLocator> locators,
             final Map<String, Animation> animations,
+            final Map<String, BakedAnimation> baked,
             final BoundingBox boundingBox,
             final LoadReport report,
             final ModelSpawner spawner
@@ -100,6 +104,7 @@ public final class Blueprint implements ModelBlueprint {
         this.apiLocators = List.copyOf(this.locators);
         this.locatorsByName = Map.copyOf(locators);
         this.animations = Collections.unmodifiableMap(new LinkedHashMap<>(animations));
+        this.baked = Map.copyOf(baked);
         this.boundingBox = boundingBox.clone();
         this.report = report;
         this.spawner = spawner;
@@ -220,6 +225,16 @@ public final class Blueprint implements ModelBlueprint {
      */
     public Optional<Animation> animation(final String name) {
         return Optional.ofNullable(this.animations.get(name));
+    }
+
+    /**
+     * Find an animation baked for playing, by its name.
+     *
+     * @param name the animation's name
+     * @return the baked animation, or empty if there is none by that name
+     */
+    public Optional<BakedAnimation> baked(final String name) {
+        return Optional.ofNullable(this.baked.get(name));
     }
 
     /**

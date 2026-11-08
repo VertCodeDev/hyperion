@@ -51,7 +51,18 @@ class HyperionConfigTest {
 
         ModelSettings models = HyperionConfig.of(this.bundled, this.logger, ITEMS).models();
         assertEquals(48, models.viewDistance());
-        assertEquals(3, models.interpolation());
+        assertEquals(2, models.interpolation());
+        assertTrue(models.autoAnimations().enabled());
+        assertEquals("walk", models.autoAnimations().walk());
+    }
+
+    @Test
+    void readsAutoAnimationChoicesPerEntityType() {
+        this.bundled.set("models.auto-animations.entities.minecraft:armor_stand", false);
+        AutoAnimations auto = HyperionConfig.of(this.bundled, this.logger, ITEMS).models().autoAnimations();
+
+        assertEquals(false, auto.entities().get("armor_stand"));
+        assertTrue(auto.enabled());
     }
 
     @Test
@@ -82,7 +93,7 @@ class HyperionConfigTest {
         ModelSettings models = HyperionConfig.of(this.bundled, this.logger, ITEMS).models();
 
         assertEquals(48, models.viewDistance());
-        assertEquals(3, models.interpolation());
+        assertEquals(2, models.interpolation());
     }
 
     @Test

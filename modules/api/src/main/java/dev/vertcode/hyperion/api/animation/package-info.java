@@ -1,5 +1,6 @@
 /**
- * Animation playback on a live model. Only the basics for now; the rest comes with the animation plan.
+ * Animation playback on a live model: play, layer, fade and stop its Blockbench animations, for
+ * everyone or for one player.
  *
  * <p>Null-marked: nothing in this package is null unless it says {@code @Nullable}.
  */

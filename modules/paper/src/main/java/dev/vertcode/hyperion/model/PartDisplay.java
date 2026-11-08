@@ -29,6 +29,7 @@ final class PartDisplay {
     private @Nullable DisplayLook look;
     private @Nullable DisplayLook sentLook;
     private ItemStack item = ItemStack.EMPTY;
+    private ItemStack sentItem = ItemStack.EMPTY;
     private boolean itemChanged;
     private boolean viewerItemsStale;
 
@@ -139,8 +140,31 @@ final class PartDisplay {
     void sent() {
         this.sentTransform = this.transform;
         this.sentLook = this.look;
+        this.sentItem = this.item;
         this.itemChanged = false;
         this.viewerItemsStale = false;
+    }
+
+    /**
+     * Return where viewers were last sent the display.
+     *
+     * @return the transform, or null before it was sent
+     */
+    @Nullable DisplayTransform sentTransform() {
+        return this.sentTransform;
+    }
+
+    /**
+     * Return how viewers were last sent the display.
+     *
+     * @return the look, or null before it was sent
+     */
+    @Nullable DisplayLook sentLook() {
+        return this.sentLook;
+    }
+
+    ItemStack sentItem() {
+        return this.sentItem;
     }
 
     /**

@@ -411,6 +411,10 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
         return this.plugin;
     }
 
+    ModelSettings settings() {
+        return this.settings;
+    }
+
     PartItems items() {
         return this.items;
     }
@@ -443,6 +447,27 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
         }
 
         return List.copyOf(near);
+    }
+
+    /**
+     * Find the model nearest to a location.
+     *
+     * @param center where to measure from
+     * @param radius how far to look
+     * @return the nearest model, or empty when none is within the radius
+     */
+    public Optional<Model> nearest(final Location center, final double radius) {
+        Model best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (Model model : this.near(center, radius)) {
+            double distance = model.location().distanceSquared(center);
+            if (distance < bestDistance) {
+                best = model;
+                bestDistance = distance;
+            }
+        }
+
+        return Optional.ofNullable(best);
     }
 
     /**

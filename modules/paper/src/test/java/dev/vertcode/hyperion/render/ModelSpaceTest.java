@@ -5,6 +5,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
+import dev.vertcode.hyperion.animation.BonePose;
 import dev.vertcode.hyperion.api.model.ModelRotation;
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
 import dev.vertcode.hyperion.pack.ModelPart;
@@ -14,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ModelSpaceTest {
 
     private static final float EPSILON = 1.0e-5f;
-    private static final float QUARTER = (float) Math.toRadians(90);
 
     @Test
     void turnsANorthFacingModelToFaceWhereItsAnchorLooks() {
@@ -39,8 +39,7 @@ class ModelSpaceTest {
     @Test
     void turnsABoneAroundItsPivot() {
         Vector3f pivot = new Vector3f(0, 1, 0);
-        Quaternionf rest = new Quaternionf().rotationZ(QUARTER);
-        Matrix4f bone = ModelSpace.bone(new Matrix4f(), new Matrix4f(), pivot, rest, BoneTransform.IDENTITY);
+        Matrix4f bone = bone(new Matrix4f(), pivot, new Vector3f(0, 0, 90), new BonePose(), BoneTransform.IDENTITY);
 
         assertVector(pivot, bone.transformPosition(new Vector3f(pivot)));
         assertVector(new Vector3f(0, 2, 0), bone.transformPosition(new Vector3f(1, 1, 0)));
@@ -48,16 +47,30 @@ class ModelSpaceTest {
 
     @Test
     void movesChildrenWithTheirParent() {
-        Matrix4f parent = ModelSpace.bone(
-                new Matrix4f(),
-                new Matrix4f(),
-                new Vector3f(),
-                new Quaternionf(),
-                BoneTransform.ofTranslation(0, 1, 0)
-        );
-        Matrix4f child = ModelSpace.bone(new Matrix4f(), parent, new Vector3f(0, 2, 0), new Quaternionf(), BoneTransform.IDENTITY);
+        Matrix4f parent = bone(new Matrix4f(), new Vector3f(), new Vector3f(), new BonePose(), BoneTransform.ofTranslation(0, 1, 0));
+        Matrix4f child = bone(parent, new Vector3f(0, 2, 0), new Vector3f(), new BonePose(), BoneTransform.IDENTITY);
 
         assertVector(new Vector3f(0, 3, 0), child.transformPosition(new Vector3f(0, 2, 0)));
+    }
+
+    @Test
+    void addsAnAnimationsAnglesToTheRestAngles() {
+        BonePose pose = new BonePose();
+        pose.rotation().set(0, 0, 45);
+        Matrix4f animated = bone(new Matrix4f(), new Vector3f(), new Vector3f(0, 0, 45), pose, BoneTransform.IDENTITY);
+        Matrix4f quarter = bone(new Matrix4f(), new Vector3f(), new Vector3f(0, 0, 90), new BonePose(), BoneTransform.IDENTITY);
+
+        assertVector(quarter.transformPosition(new Vector3f(1, 0, 0)), animated.transformPosition(new Vector3f(1, 0, 0)));
+    }
+
+    @Test
+    void movesAndStretchesABoneByItsPose() {
+        BonePose pose = new BonePose();
+        pose.position().set(0, 1, 0);
+        pose.scale().set(2f);
+        Matrix4f bone = bone(new Matrix4f(), new Vector3f(), new Vector3f(), pose, BoneTransform.IDENTITY);
+
+        assertVector(new Vector3f(2, 1, 0), bone.transformPosition(new Vector3f(1, 0, 0)));
     }
 
     @Test
@@ -81,6 +94,16 @@ class ModelSpaceTest {
 
         assertVector(new Vector3f(3), new Vector3f(transform.scale()));
         assertVector(new Vector3f(0, 0, -1.5f), new Vector3f(transform.translation()));
+    }
+
+    private static Matrix4f bone(
+            final Matrix4f parent,
+            final Vector3f pivot,
+            final Vector3f rest,
+            final BonePose pose,
+            final BoneTransform transform
+    ) {
+        return ModelSpace.bone(new Matrix4f(), parent, pivot, rest, pose, transform, new Quaternionf());
     }
 
     private static void assertVector(final Vector3f expected, final Vector3f actual) {

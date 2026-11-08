@@ -42,7 +42,6 @@ final class HyperionBone implements Bone {
     private final HyperionModel model;
     private final LookState look;
     private final Map<Key, BoneModifier> modifiers = new LinkedHashMap<>();
-    private final Matrix4f matrix = new Matrix4f();
     private final List<PartDisplay> displays = new ArrayList<>();
     private volatile BlueprintBone blueprint;
     private volatile @Nullable HyperionBone parent;
@@ -54,6 +53,7 @@ final class HyperionBone implements Bone {
     private volatile @Nullable ItemStack item;
     private volatile Matrix4fc world = new Matrix4f();
     private volatile boolean itemDirty;
+    private BoneTransform lastTransform = BoneTransform.IDENTITY;
     private @Nullable PartDisplay itemDisplay;
 
     /**
@@ -170,12 +170,16 @@ final class HyperionBone implements Bone {
     }
 
     /**
-     * Return the bone's own matrix, without the root, which only the owning thread writes.
+     * Return this frame's transform, with the modifiers, as the shared pass worked it out.
      *
-     * @return the matrix
+     * @return the transform
      */
-    Matrix4f matrix() {
-        return this.matrix;
+    BoneTransform lastTransform() {
+        return this.lastTransform;
+    }
+
+    void lastTransform(final BoneTransform transform) {
+        this.lastTransform = transform;
     }
 
     @Override

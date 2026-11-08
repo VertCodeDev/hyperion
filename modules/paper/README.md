@@ -31,8 +31,8 @@ not a new Hyperion release. Hyperion does not start without it.
 | `render` | The bone and part matrices, the item display's entity data, the items parts show, and the packets |
 | `behavior` | `HyperionBehaviorRegistry`: the behavior types plugins register |
 | `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, and `BaseEntityListener`, the PacketEvents listener that hides an entity's parts |
-
-An `animation` package arrives with animations.
+| `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
+| `animation.molang` | The part of Molang Blockbench keyframes use |
 
 ## Models
 
@@ -67,6 +67,8 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy attach <model> [scale]` | `hyperion.command.spawn` | Put a model on the entity you look at |
 | `/hy near [radius]` | `hyperion.command.remove` | The models around you, nearest first, each a click away from removal |
 | `/hy remove [radius]` | `hyperion.command.remove` | Remove the nearest model, or every model within the radius |
+| `/hy animate play <animation> [speed]` | `hyperion.command.animate` | Play an animation on the nearest model |
+| `/hy animate stop [animation]` | `hyperion.command.animate` | Stop one animation, or all of them, on the nearest model |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
 | `/hy pack send [players]` | `hyperion.command.pack.send` | Offer the pack again, to some players or everyone |
 | `/hy pack status` | `hyperion.command.pack.status` | Hosting, link, size and hash, and how players are doing with it |
@@ -101,9 +103,30 @@ A model leaves when it is removed, its entity dies or unloads, its blueprint is 
 the plugin disables. After a reload, live models move onto the new blueprint once the new pack is
 built, keeping what was set on bones that are still there.
 
-Animations, per-player views and the built-in behaviors (head, hitbox, seat, nametag, hands)
-arrive in later versions. Behavior types other plugins register already attach to the bones they
-match.
+The built-in behaviors (head, hitbox, seat, nametag, hands) arrive in a later version. Behavior
+types other plugins register already attach to the bones they match.
+
+## Animations
+
+Every animation is baked when its model loads, on the async scheduler: each bone it moves gets
+one sample per tick of its offset, angles and stretch, worked out with Blockbench's own math
+(linear, smooth, step and bezier keyframes, angles added before they turn the bone). Every model
+playing it shares the samples, so playing only reads and blends numbers.
+
+Keyframes may hold Molang: arithmetic, comparisons, `math.*`, `query.anim_time` and
+`query.life_time`, and variables. Anything else is a warning in `/hy validate` and reads as 0.
+
+Several animations play at once and add up per bone, as in Blockbench; one marked to override
+replaces those started before it. Each can play faster or slower, loop, play once or hold its
+last frame, and fade in and out. An animated bone is sent every tick; bones no animation moves
+still send nothing.
+
+Models on entities play `idle` while the entity stands and `walk` while it moves, when they have
+those animations. `models.auto-animations` in `config.yml` sets the names, turns it off for
+every model, or per entity type (`armor_stand: false`); a plugin can turn it off per model.
+
+A player's view of a model (`Model#view`) has its own animator and look overrides: what it plays
+and sets only that player sees, on top of what everyone sees.
 
 ## Resource pack
 

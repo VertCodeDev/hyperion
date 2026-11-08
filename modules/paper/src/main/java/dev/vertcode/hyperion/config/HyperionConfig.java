@@ -1,6 +1,8 @@
 package dev.vertcode.hyperion.config;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
@@ -31,7 +33,8 @@ public record HyperionConfig(PackSettings pack, ModelSettings models) {
     private static final String DEFAULT_BASE_ITEM = "paper";
     private static final String MINECRAFT = "minecraft:";
     private static final int DEFAULT_VIEW_DISTANCE = 48;
-    private static final int DEFAULT_INTERPOLATION = 3;
+    private static final int DEFAULT_INTERPOLATION = 2;
+    private static final String AUTO = "models.auto-animations.";
 
     /**
      * Read {@code config.yml} from the data folder, writing or completing it from the jar first.
@@ -92,7 +95,36 @@ public record HyperionConfig(PackSettings pack, ModelSettings models) {
                 config.getInt("pack.custom-model-data-start", DEFAULT_CUSTOM_MODEL_DATA)
         );
 
-        return new HyperionConfig(pack, new ModelSettings(viewDistance, interpolation));
+        return new HyperionConfig(pack, new ModelSettings(viewDistance, interpolation, autoAnimations(config)));
+    }
+
+    /**
+     * Read the automatic idle and walk animations: the default, the names, and a choice per
+     * entity type.
+     *
+     * @param config the contents of {@code config.yml}
+     * @return the settings
+     */
+    private static AutoAnimations autoAnimations(final ConfigurationSection config) {
+        Map<String, Boolean> entities = new HashMap<>();
+        ConfigurationSection section = config.getConfigurationSection(AUTO + "entities");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                String type = key.trim().toLowerCase(Locale.ROOT);
+                if (type.startsWith(MINECRAFT)) {
+                    type = type.substring(MINECRAFT.length());
+                }
+
+                entities.put(type, section.getBoolean(key));
+            }
+        }
+
+        return new AutoAnimations(
+                config.getBoolean(AUTO + "enabled", true),
+                config.getString(AUTO + "idle", "idle"),
+                config.getString(AUTO + "walk", "walk"),
+                entities
+        );
     }
 
     /**

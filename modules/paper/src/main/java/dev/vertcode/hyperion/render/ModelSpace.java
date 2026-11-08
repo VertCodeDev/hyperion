@@ -6,6 +6,7 @@ import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 import org.joml.Vector3fc;
 
+import dev.vertcode.hyperion.animation.BonePose;
 import dev.vertcode.hyperion.api.model.ModelRotation;
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
 import dev.vertcode.hyperion.pack.ModelPart;
@@ -54,27 +55,47 @@ public final class ModelSpace {
     }
 
     /**
-     * Build a bone's matrix: its parent's, then its own turn and transform around its pivot.
+     * Build a bone's matrix: its parent's, then around its pivot the animation's offset, its
+     * rest angles plus the animation's, the animation's stretch, then its extra transform.
+     *
+     * <p>The angles add up before they become a rotation, as in Blockbench, so an animation
+     * turns a bone exactly as the editor shows it.
      *
      * @param dest where to write the matrix
      * @param parent the parent bone's matrix, or the identity for a root bone
      * @param pivot the bone's pivot in model space, in blocks
-     * @param rest the bone's rotation at rest
-     * @param transform the bone's extra transform, applied on top of the rest rotation
+     * @param rest the bone's rest rotation as Blockbench angles, in degrees
+     * @param pose what the animations do to the bone this frame
+     * @param transform the bone's extra transform, applied on top of the animation
+     * @param turn a quaternion to work in
      * @return dest
      */
     public static Matrix4f bone(
             final Matrix4f dest,
             final Matrix4fc parent,
             final Vector3fc pivot,
-            final Quaternionfc rest,
-            final BoneTransform transform
+            final Vector3fc rest,
+            final BonePose pose,
+            final BoneTransform transform,
+            final Quaternionf turn
     ) {
         Vector3fc offset = transform.translation();
+        Vector3fc moved = pose.position();
+        Vector3fc angles = pose.rotation();
+        turn.rotationZYX(
+                (float) Math.toRadians(rest.z() + angles.z()),
+                (float) Math.toRadians(rest.y() + angles.y()),
+                (float) Math.toRadians(rest.x() + angles.x())
+        );
 
         return dest.set(parent)
-                .translate(pivot.x() + offset.x(), pivot.y() + offset.y(), pivot.z() + offset.z())
-                .rotate(rest)
+                .translate(
+                        pivot.x() + moved.x() + offset.x(),
+                        pivot.y() + moved.y() + offset.y(),
+                        pivot.z() + moved.z() + offset.z()
+                )
+                .rotate(turn)
+                .scale(pose.scale())
                 .rotate(transform.rotation())
                 .scale(transform.scale())
                 .translate(-pivot.x(), -pivot.y(), -pivot.z());
