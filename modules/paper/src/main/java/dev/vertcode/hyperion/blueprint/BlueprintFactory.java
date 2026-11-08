@@ -65,6 +65,7 @@ final class BlueprintFactory {
      * @param source where it was loaded from
      * @param data the file as read
      * @param report the report to add naming warnings to
+     * @param spawner what the blueprint's spawn and attach hand the work to
      * @return the blueprint
      */
     static Blueprint build(
@@ -73,7 +74,8 @@ final class BlueprintFactory {
             final int revision,
             final ModelSource source,
             final ModelData data,
-            final LoadReport report
+            final LoadReport report,
+            final ModelSpawner spawner
     ) {
         BlueprintFactory factory = new BlueprintFactory(data, report);
         factory.walk(data.roots(), null, new Matrix4f());
@@ -88,7 +90,8 @@ final class BlueprintFactory {
                 factory.locators,
                 factory.animations(),
                 factory.boundingBox(),
-                report
+                report,
+                spawner
         );
     }
 

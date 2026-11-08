@@ -15,8 +15,9 @@ import org.bukkit.plugin.Plugin;
  * with a warning that names the key, so one typo never stops the plugin.
  *
  * @param pack the resource pack settings
+ * @param models the settings live models start with
  */
-public record HyperionConfig(PackSettings pack) {
+public record HyperionConfig(PackSettings pack, ModelSettings models) {
 
     /**
      * The file name, in the data folder and in the jar.
@@ -29,6 +30,8 @@ public record HyperionConfig(PackSettings pack) {
     private static final int DEFAULT_CUSTOM_MODEL_DATA = 10_000;
     private static final String DEFAULT_BASE_ITEM = "paper";
     private static final String MINECRAFT = "minecraft:";
+    private static final int DEFAULT_VIEW_DISTANCE = 48;
+    private static final int DEFAULT_INTERPOLATION = 3;
 
     /**
      * Read {@code config.yml} from the data folder, writing or completing it from the jar first.
@@ -65,7 +68,19 @@ public record HyperionConfig(PackSettings pack) {
             port = DEFAULT_PORT;
         }
 
-        return new HyperionConfig(new PackSettings(
+        int viewDistance = config.getInt("models.view-distance", DEFAULT_VIEW_DISTANCE);
+        if (viewDistance < 1) {
+            logger.warning(String.format(BAD_VALUE, viewDistance, "models.view-distance", DEFAULT_VIEW_DISTANCE));
+            viewDistance = DEFAULT_VIEW_DISTANCE;
+        }
+
+        int interpolation = config.getInt("models.interpolation", DEFAULT_INTERPOLATION);
+        if (interpolation < 0) {
+            logger.warning(String.format(BAD_VALUE, interpolation, "models.interpolation", DEFAULT_INTERPOLATION));
+            interpolation = DEFAULT_INTERPOLATION;
+        }
+
+        PackSettings pack = new PackSettings(
                 hosting,
                 port,
                 config.getString("pack.self-host.address", "").trim(),
@@ -75,7 +90,9 @@ public record HyperionConfig(PackSettings pack) {
                 config.getBoolean("pack.resend-on-change", true),
                 baseItem(config.getString("pack.base-item", DEFAULT_BASE_ITEM), logger, isItem),
                 config.getInt("pack.custom-model-data-start", DEFAULT_CUSTOM_MODEL_DATA)
-        ));
+        );
+
+        return new HyperionConfig(pack, new ModelSettings(viewDistance, interpolation));
     }
 
     /**

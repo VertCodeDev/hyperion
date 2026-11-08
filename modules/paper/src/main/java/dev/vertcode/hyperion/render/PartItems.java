@@ -1,0 +1,95 @@
+package dev.vertcode.hyperion.render;
+
+import java.util.Locale;
+
+import com.github.retrooper.packetevents.protocol.component.ComponentTypes;
+import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemDyeColor;
+import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemModel;
+import com.github.retrooper.packetevents.protocol.item.ItemStack;
+import com.github.retrooper.packetevents.protocol.item.type.ItemType;
+import com.github.retrooper.packetevents.protocol.item.type.ItemTypes;
+import com.github.retrooper.packetevents.resources.ResourceLocation;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
+import org.bukkit.Color;
+import org.jspecify.annotations.Nullable;
+
+import dev.vertcode.hyperion.pack.ModelPart;
+
+/**
+ * Build the items displays show: a model part on the base item, or an item a bone was given.
+ *
+ * <p>From 1.21.4 a part names its model through the {@code item_model} component; before, it
+ * picks it with custom model data. The tint is the dye color, which the pack's item definitions
+ * apply to any base item from 1.21.4 and only dyeable base items show before.
+ */
+public final class PartItems {
+
+    private static final String MINECRAFT = "minecraft:";
+
+    private final ItemType base;
+    private final boolean itemModels;
+
+    /**
+     * Prepare to build items.
+     *
+     * @param baseItem the item every part is shown as, such as {@code paper}
+     * @param itemModels whether parts name their model with {@code item_model}, from 1.21.4
+     */
+    public PartItems(final String baseItem, final boolean itemModels) {
+        ItemType type = ItemTypes.getByName(MINECRAFT + baseItem.toLowerCase(Locale.ROOT));
+        this.base = type == null ? ItemTypes.PAPER : type;
+        this.itemModels = itemModels;
+    }
+
+    /**
+     * Build the item that shows a model part.
+     *
+     * @param part the part
+     * @param look how the part looks
+     * @return the item, {@link ItemStack#EMPTY} when the part is hidden
+     */
+    public ItemStack part(final ModelPart part, final DisplayLook look) {
+        if (!look.visible()) {
+            return ItemStack.EMPTY;
+        }
+
+        ItemStack item = ItemStack.builder().type(this.base).amount(1).build();
+        if (this.itemModels) {
+            item.setComponent(ComponentTypes.ITEM_MODEL, new ItemModel(new ResourceLocation(part.model())));
+        } else {
+            item.setComponent(ComponentTypes.CUSTOM_MODEL_DATA, part.customModelData());
+        }
+
+        Color tint = look.tint();
+        if (tint != null) {
+            item.setComponent(ComponentTypes.DYED_COLOR, new ItemDyeColor(tint.asRGB()));
+        }
+
+        if (look.glint()) {
+            item.setComponent(ComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+        }
+
+        return item;
+    }
+
+    /**
+     * Build the display item for an item a bone was given in place of its cubes.
+     *
+     * @param item the item, or null or empty for nothing
+     * @param look how the bone looks; only visibility and glint apply to a given item
+     * @return the item, {@link ItemStack#EMPTY} for nothing
+     */
+    // Bukkit's ItemStack is qualified: the PacketEvents ItemStack this class builds has the same name.
+    public ItemStack given(final org.bukkit.inventory.@Nullable ItemStack item, final DisplayLook look) {
+        if (!look.visible() || item == null || item.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+
+        ItemStack converted = SpigotConversionUtil.fromBukkitItemStack(item);
+        if (look.glint()) {
+            converted.setComponent(ComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, true);
+        }
+
+        return converted;
+    }
+}

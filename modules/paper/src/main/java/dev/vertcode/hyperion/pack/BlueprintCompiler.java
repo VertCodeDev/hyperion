@@ -89,7 +89,7 @@ final class BlueprintCompiler {
         this.writeTextures();
 
         Map<String, List<ModelPart>> parts = new LinkedHashMap<>();
-        for (BlueprintBone bone : this.blueprint.bones()) {
+        for (BlueprintBone bone : this.blueprint.blueprintBones()) {
             if (!bone.cubes().isEmpty()) {
                 parts.put(bone.name(), this.bone(bone));
             }

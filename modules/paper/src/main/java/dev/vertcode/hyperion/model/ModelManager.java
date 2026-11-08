@@ -1,0 +1,456 @@
+package dev.vertcode.hyperion.model;
+
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.player.User;
+import net.kyori.adventure.key.Key;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
+
+import dev.vertcode.hyperion.api.event.ModelSpawnEvent;
+import dev.vertcode.hyperion.api.model.EntityAnchor;
+import dev.vertcode.hyperion.api.model.EntityPart;
+import dev.vertcode.hyperion.api.model.LocationAnchor;
+import dev.vertcode.hyperion.api.model.Model;
+import dev.vertcode.hyperion.api.model.ModelAnchor;
+import dev.vertcode.hyperion.api.model.ModelTracker;
+import dev.vertcode.hyperion.api.model.RemovalReason;
+import dev.vertcode.hyperion.api.model.SpawnOptions;
+import dev.vertcode.hyperion.api.version.Feature;
+import dev.vertcode.hyperion.api.version.MinecraftVersion;
+import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
+import dev.vertcode.hyperion.blueprint.Blueprint;
+import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
+import dev.vertcode.hyperion.blueprint.ModelSpawner;
+import dev.vertcode.hyperion.config.ModelSettings;
+import dev.vertcode.hyperion.config.PackSettings;
+import dev.vertcode.hyperion.pack.ResourcePack;
+import dev.vertcode.hyperion.render.PartItems;
+
+/**
+ * Spawns models, keeps track of every live one, and follows reloads.
+ *
+ * <p>The indexes are concurrent, so the tracker methods, the packet listener and the entity
+ * listeners read them from any thread. Spawning, refreshing and removing a model happen on the
+ * thread that owns it; the methods here that start them from elsewhere hop there first.
+ */
+public final class ModelManager implements ModelSpawner, ModelTracker {
+
+    private static final String UNREGISTERED = "The blueprint %s is no longer registered";
+    private static final String INVALID_ENTITY = "The entity is not in a world";
+    private static final String NO_WORLD = "The location has no world";
+    private static final String NOT_OWNER = "Spawn a model on the thread that owns its %s";
+
+    private final Plugin plugin;
+    private final BlueprintRegistry registry;
+    private final HyperionBehaviorRegistry behaviors;
+    private final boolean itemModels;
+    private final Map<UUID, HyperionModel> models = new ConcurrentHashMap<>();
+    private final Map<Integer, List<HyperionModel>> byEntity = new ConcurrentHashMap<>();
+    private volatile ModelSettings settings;
+    private volatile PartItems items;
+    private volatile String baseItem;
+    private volatile @Nullable ResourcePack pack;
+
+    /**
+     * Create the manager.
+     *
+     * @param plugin the plugin, for scheduling, events and logging
+     * @param registry the blueprints, to follow reloads
+     * @param behaviors the behavior types matched to bones
+     * @param version the server's version, which decides how parts name their model
+     * @param settings the model settings from {@code config.yml}
+     * @param pack the pack settings from {@code config.yml}, for the base item
+     */
+    public ModelManager(
+            final Plugin plugin,
+            final BlueprintRegistry registry,
+            final HyperionBehaviorRegistry behaviors,
+            final MinecraftVersion version,
+            final ModelSettings settings,
+            final PackSettings pack
+    ) {
+        this.plugin = plugin;
+        this.registry = registry;
+        this.behaviors = behaviors;
+        this.itemModels = Feature.ITEM_MODEL_DEFINITIONS.availableOn(version);
+        this.settings = settings;
+        this.items = new PartItems(pack.baseItem(), this.itemModels);
+        this.baseItem = pack.baseItem();
+    }
+
+    /**
+     * Use new settings from {@code config.yml}. The view distance and interpolation apply to
+     * models spawned from now on; the base item reaches live models with the next pack.
+     *
+     * @param models the model settings
+     * @param pack the pack settings
+     */
+    public void configure(final ModelSettings models, final PackSettings pack) {
+        this.settings = models;
+        this.items = new PartItems(pack.baseItem(), this.itemModels);
+        boolean newItem = !pack.baseItem().equals(this.baseItem);
+        this.baseItem = pack.baseItem();
+        ResourcePack current = this.pack;
+        if (newItem && current != null) {
+            this.refreshAll(current, true);
+        }
+    }
+
+    @Override
+    public Model spawn(final Blueprint blueprint, final ModelAnchor anchor, final Consumer<SpawnOptions> options) {
+        Blueprint current = this.registry.find(blueprint.key())
+                .orElseThrow(() -> new IllegalStateException(String.format(UNREGISTERED, blueprint.key().asString())));
+        Set<EntityPart> hidden = EntityPart.NONE;
+        Entity entity = null;
+        switch (anchor) {
+            case EntityAnchor(Entity carrier) -> {
+                if (!carrier.isValid()) {
+                    throw new IllegalStateException(INVALID_ENTITY);
+                }
+
+                if (!Bukkit.isOwnedByCurrentRegion(carrier)) {
+                    throw new IllegalStateException(String.format(NOT_OWNER, "entity"));
+                }
+
+                hidden = EntityPart.ALL;
+                entity = carrier;
+            }
+            case LocationAnchor(Location location) -> {
+                if (location.getWorld() == null) {
+                    throw new IllegalArgumentException(NO_WORLD);
+                }
+
+                if (!Bukkit.isOwnedByCurrentRegion(location)) {
+                    throw new IllegalStateException(String.format(NOT_OWNER, "location"));
+                }
+            }
+        }
+
+        ModelSettings defaults = this.settings;
+        ModelOptions chosen = new ModelOptions(current, defaults.viewDistance(), defaults.interpolation(), hidden);
+        options.accept(chosen);
+        HyperionModel model = new HyperionModel(this, current, anchor, chosen, this.pack);
+        this.models.put(model.uniqueId(), model);
+        if (entity != null) {
+            this.byEntity.computeIfAbsent(entity.getEntityId(), id -> new CopyOnWriteArrayList<>()).add(model);
+        }
+
+        model.start();
+        Bukkit.getPluginManager().callEvent(new ModelSpawnEvent(model));
+
+        return model;
+    }
+
+    /**
+     * Follow a new pack: every live model moves to the blueprint now registered under its key
+     * and to the pack's parts, or is removed when its key is gone. Safe from any thread.
+     *
+     * @param next the new pack
+     */
+    public void refresh(final ResourcePack next) {
+        this.pack = next;
+        this.refreshAll(next, false);
+    }
+
+    /**
+     * Move every live model to the blueprint registered under its key and a pack's parts.
+     *
+     * @param next the pack
+     * @param force true to send every model again even when nothing changed for it
+     */
+    private void refreshAll(final ResourcePack next, final boolean force) {
+        for (HyperionModel model : this.models.values()) {
+            Optional<Blueprint> latest = this.registry.find(model.currentBlueprint().key());
+            if (latest.isEmpty()) {
+                model.removeLater(RemovalReason.BLUEPRINT_UNREGISTERED);
+                continue;
+            }
+
+            model.runOnOwner(() -> model.refresh(latest.get(), next, force));
+        }
+    }
+
+    /**
+     * Remove every model of a blueprint, each on the thread that owns it. Safe from any thread.
+     *
+     * @param key the blueprint's key
+     * @param reason why they are removed
+     */
+    public void removeAll(final Key key, final RemovalReason reason) {
+        for (HyperionModel model : this.models.values()) {
+            if (model.currentBlueprint().key().equals(key)) {
+                model.removeLater(reason);
+            }
+        }
+    }
+
+    /**
+     * Remove a model on the thread that owns it. Safe from any thread.
+     *
+     * @param model the model
+     * @param reason why it is removed
+     */
+    public void remove(final Model model, final RemovalReason reason) {
+        if (model instanceof HyperionModel live) {
+            live.removeLater(reason);
+        }
+    }
+
+    /**
+     * Remove every model, as Hyperion disables. On the thread that owns a model it is removed
+     * with an event; elsewhere it is only taken down, since events cannot fire there.
+     */
+    public void shutdown() {
+        for (HyperionModel model : List.copyOf(this.models.values())) {
+            if (model.isOwnedHere()) {
+                model.removeNow(RemovalReason.PLUGIN_DISABLED);
+            } else {
+                model.tearDown();
+            }
+        }
+    }
+
+    // Entity and player hooks
+
+    /**
+     * Show the models on an entity to a player who just started tracking it.
+     *
+     * @param player the player
+     * @param entity the entity
+     */
+    public void tracked(final Player player, final Entity entity) {
+        for (HyperionModel model : this.on(entity.getEntityId())) {
+            model.tracked(player);
+        }
+    }
+
+    /**
+     * Hide the models on an entity from a player who stopped tracking it.
+     *
+     * @param player the player
+     * @param entity the entity
+     */
+    public void untracked(final Player player, final Entity entity) {
+        for (HyperionModel model : this.on(entity.getEntityId())) {
+            model.untracked(player);
+        }
+    }
+
+    /**
+     * Remove the models on an entity that is leaving the world. Runs on the entity's thread.
+     *
+     * @param entity the entity
+     * @param reason why the models go
+     */
+    public void entityRemoved(final Entity entity, final RemovalReason reason) {
+        for (HyperionModel model : this.on(entity.getEntityId())) {
+            model.removeNow(reason);
+        }
+    }
+
+    /**
+     * Forget a player whose client dropped every entity.
+     *
+     * @param player the player's id
+     * @param left true when they left the server
+     */
+    public void lose(final UUID player, final boolean left) {
+        for (HyperionModel model : this.models.values()) {
+            model.lose(player, left);
+        }
+    }
+
+    // Packet listener lookups
+
+    /**
+     * Return whether any entity carries a model, so the packet listener can skip every packet
+     * when none does.
+     *
+     * @return true when at least one model is on an entity
+     */
+    public boolean anyOnEntities() {
+        return !this.byEntity.isEmpty();
+    }
+
+    /**
+     * Return the parts the models a player sees on an entity hide from them.
+     *
+     * @param entityId the entity's id
+     * @param viewer the player's id
+     * @return the hidden parts, empty when they see no model on it
+     */
+    public Set<EntityPart> hiddenFor(final int entityId, final UUID viewer) {
+        Set<EntityPart> hidden = null;
+        for (HyperionModel model : this.on(entityId)) {
+            if (model.isRemoved() || !model.seenBy(viewer)) {
+                continue;
+            }
+
+            if (hidden == null) {
+                hidden = EnumSet.noneOf(EntityPart.class);
+            }
+
+            hidden.addAll(model.hiddenParts());
+        }
+
+        return hidden == null ? EntityPart.NONE : hidden;
+    }
+
+    /**
+     * Return the displays of every model a player sees on an entity, to mount on it.
+     *
+     * @param entityId the entity's id
+     * @param viewer the player's id
+     * @return the displays' entity ids
+     */
+    public int[] displaysFor(final int entityId, final UUID viewer) {
+        List<HyperionModel> carried = this.on(entityId);
+        if (carried.isEmpty()) {
+            return new int[0];
+        }
+
+        List<int[]> parts = new ArrayList<>(carried.size());
+        int total = 0;
+        for (HyperionModel model : carried) {
+            if (!model.isRemoved() && model.seenBy(viewer)) {
+                int[] ids = model.displayIds();
+                parts.add(ids);
+                total += ids.length;
+            }
+        }
+
+        int[] all = new int[total];
+        int at = 0;
+        for (int[] ids : parts) {
+            System.arraycopy(ids, 0, all, at, ids.length);
+            at += ids.length;
+        }
+
+        return all;
+    }
+
+    /**
+     * Return everything riding an entity for one player: its real passengers and the displays of
+     * the models they see on it. Call on the entity's thread.
+     *
+     * @param entity the entity
+     * @param viewer the player's id
+     * @return the entity ids
+     */
+    int[] passengers(final Entity entity, final UUID viewer) {
+        List<Entity> riders = entity.getPassengers();
+        int[] displays = this.displaysFor(entity.getEntityId(), viewer);
+        int[] all = new int[riders.size() + displays.length];
+        for (int i = 0; i < riders.size(); i++) {
+            all[i] = riders.get(i).getEntityId();
+        }
+
+        System.arraycopy(displays, 0, all, riders.size(), displays.length);
+
+        return all;
+    }
+
+    // Internals for models
+
+    /**
+     * Return the models on an entity.
+     *
+     * @param entityId the entity's id
+     * @return the models, empty when none
+     */
+    private List<HyperionModel> on(final int entityId) {
+        List<HyperionModel> carried = this.byEntity.get(entityId);
+
+        return carried == null ? List.of() : carried;
+    }
+
+    /**
+     * Drop a removed model from every index.
+     *
+     * @param model the model
+     */
+    void forget(final HyperionModel model) {
+        this.models.remove(model.uniqueId());
+        Entity entity = model.entity();
+        if (entity == null) {
+            return;
+        }
+
+        this.byEntity.computeIfPresent(entity.getEntityId(), (id, carried) -> {
+            carried.remove(model);
+            return carried.isEmpty() ? null : carried;
+        });
+    }
+
+    /**
+     * Return a player's PacketEvents connection.
+     *
+     * @param player the player
+     * @return the connection, or null while PacketEvents does not know the player yet
+     */
+    @Nullable User user(final Player player) {
+        return PacketEvents.getAPI().getPlayerManager().getUser(player);
+    }
+
+    Plugin plugin() {
+        return this.plugin;
+    }
+
+    PartItems items() {
+        return this.items;
+    }
+
+    HyperionBehaviorRegistry behaviors() {
+        return this.behaviors;
+    }
+
+    // Tracker
+
+    @Override
+    public List<Model> of(final Entity entity) {
+        return List.copyOf(this.on(entity.getEntityId()));
+    }
+
+    @Override
+    public Optional<Model> byId(final UUID id) {
+        return Optional.ofNullable(this.models.get(id));
+    }
+
+    @Override
+    public List<Model> near(final Location center, final double radius) {
+        double range = radius * radius;
+        List<Model> near = new ArrayList<>();
+        for (HyperionModel model : this.models.values()) {
+            Location at = model.location();
+            if (at.getWorld() != null && at.getWorld().equals(center.getWorld()) && at.distanceSquared(center) <= range) {
+                near.add(model);
+            }
+        }
+
+        return List.copyOf(near);
+    }
+
+    /**
+     * Return every live model.
+     *
+     * @return the models
+     */
+    public List<Model> all() {
+        return List.copyOf(this.models.values());
+    }
+}

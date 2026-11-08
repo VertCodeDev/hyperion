@@ -2,6 +2,14 @@
 #
 # Keys Hyperion adds in an update are written into this file on the next start; your changes stay.
 
+# Live models. A plugin that spawns a model can give it its own values.
+models:
+  # How far away, in blocks, players see a model.
+  view-distance: 48
+  # Over how many ticks a player's client smooths each move of a bone. 0 snaps every move;
+  # higher is smoother but trails behind.
+  interpolation: 3
+
 # The resource pack that holds every model.
 pack:
   # How players get the pack:

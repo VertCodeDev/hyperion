@@ -22,6 +22,7 @@ import dev.vertcode.hyperion.HyperionPlugin;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessagePalette;
+import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackManager;
 
 import static dev.vertcode.hyperion.config.HyperionMessages.value;
@@ -55,11 +56,13 @@ public final class HyperionCommands {
      * @param plugin the plugin that owns the commands
      * @param registry the loaded blueprints the commands show and reload
      * @param packs the resource pack the pack commands build and send
+     * @param models the live models the spawn and remove commands work on
      */
     public static void register(
             final HyperionPlugin plugin,
             final BlueprintRegistry registry,
-            final PackManager packs
+            final PackManager packs,
+            final ModelManager models
     ) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
@@ -92,7 +95,9 @@ public final class HyperionCommands {
                 new PackBuildCommand(plugin, packs),
                 new PackSendCommand(packs),
                 new PackStatusCommand(packs),
-                new PackExportCommand(plugin, packs)
+                new PackExportCommand(plugin, packs),
+                new SpawnCommand(plugin, registry, packs),
+                new RemoveCommand(models)
         );
     }
 

@@ -104,7 +104,7 @@ public record BlueprintChanges(
      */
     private static List<String> boneNames(final Blueprint blueprint) {
         List<String> names = new ArrayList<>();
-        for (BlueprintBone bone : blueprint.bones()) {
+        for (BlueprintBone bone : blueprint.blueprintBones()) {
             names.add(bone.name());
         }
 

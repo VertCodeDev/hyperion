@@ -71,7 +71,8 @@ public final class Fixtures {
                 1,
                 new FileSource(path(name)),
                 data,
-                report
+                report,
+                ModelSpawner.UNAVAILABLE
         );
     }
 }

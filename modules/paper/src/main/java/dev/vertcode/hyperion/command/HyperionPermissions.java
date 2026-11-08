@@ -53,6 +53,18 @@ public final class HyperionPermissions {
      */
     public static final String PACK_EXPORT = "hyperion.command.pack.export";
 
+    /**
+     * Spawn a model or put one on an entity, through {@code /hyperion spawn} and
+     * {@code /hyperion attach}.
+     */
+    public static final String SPAWN = "hyperion.command.spawn";
+
+    /**
+     * List the models nearby and remove them, through {@code /hyperion near} and
+     * {@code /hyperion remove}.
+     */
+    public static final String REMOVE = "hyperion.command.remove";
+
     private HyperionPermissions() {
     }
 }

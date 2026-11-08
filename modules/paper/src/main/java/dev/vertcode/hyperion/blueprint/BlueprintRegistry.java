@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -37,6 +38,10 @@ import dev.vertcode.hyperion.blueprint.data.ModelData;
  * from any thread. A reload keeps the old blueprint in place until the new one has loaded, so a
  * model in use never sees a half-loaded file, and a failed reload keeps the old one.
  *
+ * <p>Every blueprint it builds spawns through the {@link ModelSpawner} set with
+ * {@link #useSpawner(ModelSpawner)}, so a blueprint loaded before the plugin finished enabling
+ * still spawns once it has.
+ *
  * <p>Models come from two places: files in Hyperion's {@code models/} folder, keyed by their
  * path under the {@code hyperion} namespace, and models other plugins register. A plugin's
  * models are dropped with {@link #unregisterAll(Plugin)}.
@@ -59,6 +64,10 @@ public final class BlueprintRegistry {
     private final Map<Key, Registration> registrations = new ConcurrentHashMap<>();
     private final Map<Key, LoadReport> reports = new ConcurrentHashMap<>();
     private final Map<Key, Integer> revisions = new ConcurrentHashMap<>();
+    private final ModelSpawner spawning = (blueprint, anchor, options) -> this.spawner.spawn(blueprint, anchor, options);
+    private volatile ModelSpawner spawner = ModelSpawner.UNAVAILABLE;
+    private volatile Consumer<Blueprint> loadListener = blueprint -> {
+    };
 
     /**
      * Create an empty registry. Nothing loads until {@link #reloadAll()} or
@@ -79,6 +88,24 @@ public final class BlueprintRegistry {
         this.formats = formats;
         this.executor = executor;
         this.logger = logger;
+    }
+
+    /**
+     * Spawn every blueprint, loaded already or later, through a spawner.
+     *
+     * @param spawner the spawner, or {@link ModelSpawner#UNAVAILABLE} to refuse spawns again
+     */
+    public void useSpawner(final ModelSpawner spawner) {
+        this.spawner = spawner;
+    }
+
+    /**
+     * Run something after every blueprint that loads, on the loading thread.
+     *
+     * @param listener what to run, given the new blueprint
+     */
+    public void onLoad(final Consumer<Blueprint> listener) {
+        this.loadListener = listener;
     }
 
     /**
@@ -315,10 +342,11 @@ public final class BlueprintRegistry {
         }
 
         int revision = this.revisions.merge(key, 1, Integer::sum);
-        Blueprint blueprint = BlueprintFactory.build(key, owner, revision, source, data, report);
+        Blueprint blueprint = BlueprintFactory.build(key, owner, revision, source, data, report, this.spawning);
         this.blueprints.put(key, blueprint);
         this.reports.put(key, report);
         this.log(report);
+        this.loadListener.accept(blueprint);
 
         return blueprint;
     }

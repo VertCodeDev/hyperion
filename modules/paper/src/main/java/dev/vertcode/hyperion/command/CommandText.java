@@ -4,8 +4,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 /**
@@ -26,6 +28,21 @@ public final class CommandText {
      */
     public static Component clickable(final Component line, final String command, final Component hover) {
         return line.clickEvent(ClickEvent.runCommand(command)).hoverEvent(HoverEvent.showText(hover));
+    }
+
+    /**
+     * Return where a player stands.
+     *
+     * <p>Paper marks {@code Player#getLocation()} nullable, which it never is; reading it through
+     * {@link Entity} keeps NullAway quiet without a check that cannot fail.
+     *
+     * @param player the player
+     * @return a copy of their location
+     */
+    public static Location where(final Player player) {
+        Entity self = player;
+
+        return self.getLocation();
     }
 
     /**

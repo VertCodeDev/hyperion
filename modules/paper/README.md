@@ -25,12 +25,14 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
-| `config` | `HyperionConfig` and `PackSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
+| `config` | `HyperionConfig`, `ModelSettings` and `PackSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
 | `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it |
-| `listener` | `PackListener`: offers the pack on join and tracks how players do with it |
+| `model` | `ModelManager` (spawning, the tracker, following reloads), `HyperionModel` and its bones, locators and viewers, and the api's model registry |
+| `render` | The bone and part matrices, the item display's entity data, the items parts show, and the packets |
+| `behavior` | `HyperionBehaviorRegistry`: the behavior types plugins register |
+| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, and `BaseEntityListener`, the PacketEvents listener that hides an entity's parts |
 
-More packages arrive with the features that need them: `model` for live models and rendering,
-`animation`, and `packet` for PacketEvents listeners.
+An `animation` package arrives with animations.
 
 ## Models
 
@@ -61,7 +63,10 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy info <model>` | `hyperion.command.info` | Source, size, bone tree, animations, locators and warnings |
 | `/hy reload [model]` | `hyperion.command.reload` | Load every model again, or one, and show what changed |
 | `/hy validate [model]` | `hyperion.command.validate` | The warnings and errors from the last load |
-
+| `/hy spawn <model> [scale]` | `hyperion.command.spawn` | Spawn a model on its own where you stand |
+| `/hy attach <model> [scale]` | `hyperion.command.spawn` | Put a model on the entity you look at |
+| `/hy near [radius]` | `hyperion.command.remove` | The models around you, nearest first, each a click away from removal |
+| `/hy remove [radius]` | `hyperion.command.remove` | Remove the nearest model, or every model within the radius |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
 | `/hy pack send [players]` | `hyperion.command.pack.send` | Offer the pack again, to some players or everyone |
 | `/hy pack status` | `hyperion.command.pack.status` | Hosting, link, size and hash, and how players are doing with it |
@@ -71,6 +76,34 @@ A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works. `
 reads `config.yml` and `messages.yml` again and rebuilds the pack.
 
 `hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
+
+## Live models
+
+A model is only packets: one item display for each part of each bone, sent to the players who
+can see it. The server never ticks, saves or collides with it, and models are not kept over a
+restart; a plugin puts them back, on `EntitiesLoadEvent` for models on entities.
+
+Every tick a model runs a frame on the thread that owns it. The frame works out the scale, the
+rotation and every bone, and sends each viewer only what changed: a bone that did not move costs
+nothing, and a model nobody sees works out nothing but its behaviors. Clients smooth each move
+over `models.interpolation` ticks.
+
+- **On an entity**, the displays ride the entity, so the client moves them with it and no
+  movement is sent. They sit on the entity's seat, at the top of its hitbox, so the model is
+  lowered by the entity's height. The entity's own packets are changed on their way out to hide
+  its body, equipment, name, fire and outline from the players who see the model; the entity
+  itself is never touched, so removing Hyperion leaves it as it was. Viewers follow the server's
+  own tracking of the entity, within `models.view-distance`.
+- **On its own**, a model stands at a location and moves with `Model#teleport`. Every half second
+  it looks for players within `models.view-distance`.
+
+A model leaves when it is removed, its entity dies or unloads, its blueprint is unregistered, or
+the plugin disables. After a reload, live models move onto the new blueprint once the new pack is
+built, keeping what was set on bones that are still there.
+
+Animations, per-player views and the built-in behaviors (head, hitbox, seat, nametag, hands)
+arrive in later versions. Behavior types other plugins register already attach to the bones they
+match.
 
 ## Resource pack
 
@@ -139,6 +172,12 @@ One jar supports every version from 1.21 to 26.3. To keep it that way:
 Cloud runs a command on the thread that sent it: a player's command on that player's region, the
 console's on the global region. A command that changes something owned elsewhere hops to its
 owner first.
+
+A model is owned by its entity's scheduler, or by the region of its location. Its frames run
+there, and `spawn`, `attach`, `teleport` and `remove` must be called there. Every getter and
+appearance setter is safe from any thread and takes effect on the next frame. Packets are sent
+with PacketEvents, which is safe from any thread; the PacketEvents listener runs on Netty threads
+and reads only concurrent state.
 
 ## Building
 

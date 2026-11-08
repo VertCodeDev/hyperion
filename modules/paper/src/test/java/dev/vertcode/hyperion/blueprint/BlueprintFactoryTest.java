@@ -9,6 +9,7 @@ import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
 import dev.vertcode.hyperion.api.model.bone.BoneBlueprint;
+import dev.vertcode.hyperion.api.model.locator.LocatorBlueprint;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,8 +32,8 @@ class BlueprintFactoryTest {
         LoadReport report = new LoadReport("groups_layout.bbmodel");
         Blueprint blueprint = Fixtures.blueprint("groups_layout", report);
 
-        assertEquals(List.of("body", "head"), blueprint.bones().stream().map(BlueprintBone::name).toList());
-        assertEquals(List.of("body"), blueprint.rootBones().stream().map(BlueprintBone::name).toList());
+        assertEquals(List.of("body", "head"), blueprint.bones().stream().map(BoneBlueprint::name).toList());
+        assertEquals(List.of("body"), blueprint.rootBones().stream().map(BoneBlueprint::name).toList());
 
         BoneBlueprint head = blueprint.bone("head").orElseThrow();
         assertEquals("body", head.parent().orElseThrow().name());
@@ -46,7 +47,7 @@ class BlueprintFactoryTest {
     @Test
     void placesLocatorsRelativeToTheirBone() throws IOException {
         Blueprint blueprint = Fixtures.blueprint("groups_layout", new LoadReport("groups_layout.bbmodel"));
-        BlueprintLocator mouth = blueprint.locator("mouth").orElseThrow();
+        LocatorBlueprint mouth = blueprint.locator("mouth").orElseThrow();
 
         assertEquals("head", mouth.parent().orElseThrow().name());
         assertVector(new Vector3f(0, 0.125f, -0.25f), new Vector3f(mouth.position()));
@@ -68,11 +69,11 @@ class BlueprintFactoryTest {
         LoadReport report = new LoadReport("legacy_layout.bbmodel");
         Blueprint blueprint = Fixtures.blueprint("legacy_layout", report);
 
-        assertEquals(List.of("root", "arm", "arm_2", "root_2"), blueprint.bones().stream().map(BlueprintBone::name).toList());
-        assertEquals("pebble", blueprint.bones().getLast().cubes().getFirst().name());
+        assertEquals(List.of("root", "arm", "arm_2", "root_2"), blueprint.bones().stream().map(BoneBlueprint::name).toList());
+        assertEquals("pebble", blueprint.blueprintBones().getLast().cubes().getFirst().name());
         assertTrue(report.issues().stream().anyMatch(issue -> issue.message().contains("sit outside every group")));
 
-        BlueprintLocator tip = blueprint.locator("tip").orElseThrow();
+        LocatorBlueprint tip = blueprint.locator("tip").orElseThrow();
         assertEquals("arm", tip.parent().orElseThrow().name());
         assertVector(new Vector3f(1 / 16f, -6 / 16f, 0), new Vector3f(tip.position()));
     }
@@ -98,7 +99,7 @@ class BlueprintFactoryTest {
         assertEquals(0.5, box.getMaxX(), EPSILON);
         assertEquals(1.0, box.getMaxY(), EPSILON);
         assertVector(new Vector3f(0, 0.5f, 0), new Vector3f(blueprint.bone("block").orElseThrow().pivot()));
-        assertEquals(new Vector3f(-8, 0, -8), blueprint.bones().getFirst().cubes().getFirst().from());
+        assertEquals(new Vector3f(-8, 0, -8), blueprint.blueprintBones().getFirst().cubes().getFirst().from());
     }
 
     private static void assertVector(final Vector3f expected, final Vector3f actual) {

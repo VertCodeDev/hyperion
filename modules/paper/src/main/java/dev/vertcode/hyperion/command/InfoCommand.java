@@ -74,9 +74,9 @@ public final class InfoCommand {
                 value("revision", blueprint.revision())
         ));
         this.details(message, blueprint);
-        this.bones(message, blueprint.bones());
+        this.bones(message, blueprint.blueprintBones());
         this.animations(message, blueprint);
-        this.locators(message, blueprint.locators());
+        this.locators(message, blueprint.blueprintLocators());
         this.warnings(message, blueprint);
         sender.sendMessage(message.build());
     }

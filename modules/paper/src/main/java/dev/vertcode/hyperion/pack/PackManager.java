@@ -14,6 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 import net.kyori.adventure.resource.ResourcePackInfo;
@@ -34,7 +35,8 @@ import dev.vertcode.hyperion.config.PackSettings;
  * Build, host and send the resource pack.
  *
  * <p>Builds run on the async scheduler and swap the current pack in when done, so players never
- * get half a pack. Sending to a player always happens on the region that owns that player.
+ * get half a pack. A rebuild asked for while one runs waits for it and then runs once, however
+ * many were asked for, so a burst of registrations builds the pack twice at most. Sending to a player always happens on the region that owns that player.
  * {@link #configure(PackSettings)} follows {@code config.yml}: it starts, moves or stops the
  * built-in web server as the hosting settings change.
  */
@@ -65,7 +67,11 @@ public final class PackManager {
     private final Map<UUID, PlayerResourcePackStatusEvent.Status> statuses = new ConcurrentHashMap<>();
     private volatile PackSettings settings;
     private volatile @Nullable ResourcePack pack;
+    private volatile Consumer<ResourcePack> builtListener = built -> {
+    };
     private @Nullable PackServer server;
+    private @Nullable CompletableFuture<ResourcePack> running;
+    private @Nullable CompletableFuture<ResourcePack> queued;
 
     /**
      * Create the manager. Nothing is built or served until {@link #configure(PackSettings)} and
@@ -122,29 +128,101 @@ public final class PackManager {
     }
 
     /**
-     * Build the pack from every loaded blueprint and use it. When it differs from the last one
-     * and {@code resend-on-change} is on, everyone online gets it.
+     * Run something after every build, with the pack in use: the new one, or the previous one
+     * when the build came out the same.
      *
-     * @return the new pack
+     * @param listener what to run, on the build's thread
      */
-    public CompletableFuture<ResourcePack> rebuild() {
-        return CompletableFuture
-                .supplyAsync(this::build, this.async)
-                .whenComplete((built, error) -> {
-                    if (error != null) {
-                        this.plugin.getLogger().log(Level.SEVERE, BUILD_FAILED, error);
-                        return;
-                    }
+    public void onBuilt(final Consumer<ResourcePack> listener) {
+        this.builtListener = listener;
+    }
 
-                    ResourcePack previous = this.pack;
-                    this.pack = built;
-                    String report = String.format(BUILT, built.describeSize(), built.files(), built.millis());
-                    this.plugin.getLogger().info(report);
-                    boolean changed = previous == null || !previous.sha1().equals(built.sha1());
-                    if (previous != null && changed && this.settings.resendOnChange()) {
-                        this.sendToEveryone();
-                    }
-                });
+    /**
+     * Build the pack from every loaded blueprint and use it. When it differs from the last one
+     * and {@code resend-on-change} is on, everyone online gets it. While a build runs, this
+     * queues one more build after it, shared by every call until it starts.
+     *
+     * @return the pack in use after the build
+     */
+    public synchronized CompletableFuture<ResourcePack> rebuild() {
+        if (this.running == null) {
+            return this.startBuild();
+        }
+
+        if (this.queued == null) {
+            this.queued = new CompletableFuture<>();
+        }
+
+        return this.queued;
+    }
+
+    /**
+     * Start one build and note it as running; the queued one starts after it. Call holding the
+     * lock.
+     *
+     * @return the build
+     */
+    private CompletableFuture<ResourcePack> startBuild() {
+        CompletableFuture<ResourcePack> build = CompletableFuture
+                .supplyAsync(this::build, this.async)
+                .thenApply(this::use);
+        this.running = build;
+        build.whenComplete((built, error) -> {
+            if (error != null) {
+                this.plugin.getLogger().log(Level.SEVERE, BUILD_FAILED, error);
+            }
+
+            this.next();
+        });
+
+        return build;
+    }
+
+    /**
+     * Finish a build: start the queued one, if any, and hand its result to whoever waits on it.
+     */
+    private synchronized void next() {
+        this.running = null;
+        CompletableFuture<ResourcePack> waiting = this.queued;
+        if (waiting == null) {
+            return;
+        }
+
+        this.queued = null;
+        CompletableFuture<ResourcePack> build = this.startBuild();
+        build.whenComplete((built, error) -> {
+            if (error != null) {
+                waiting.completeExceptionally(error);
+            } else {
+                waiting.complete(built);
+            }
+        });
+    }
+
+    /**
+     * Use a freshly built pack: keep the previous one when nothing changed, send a changed one
+     * to everyone when configured to, and tell the listener.
+     *
+     * @param built the new pack
+     * @return the pack in use
+     */
+    private ResourcePack use(final ResourcePack built) {
+        String report = String.format(BUILT, built.describeSize(), built.files(), built.millis());
+        this.plugin.getLogger().info(report);
+        ResourcePack previous = this.pack;
+        if (previous != null && previous.sha1().equals(built.sha1())) {
+            this.builtListener.accept(previous);
+            return previous;
+        }
+
+        this.pack = built;
+        if (previous != null && this.settings.resendOnChange()) {
+            this.sendToEveryone();
+        }
+
+        this.builtListener.accept(built);
+
+        return built;
     }
 
     /**

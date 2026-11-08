@@ -94,7 +94,7 @@ designed around that one goal:
 - [x] Plugin bootstrap and the `/hyperion` command
 - [x] Blockbench model loading
 - [x] Resource pack generation
-- [ ] Display entity rendering and tracking
+- [x] Display entity rendering and tracking
 - [ ] Animations
 - [ ] Timeline effects (particles, sounds, events)
 - [ ] Custom armor

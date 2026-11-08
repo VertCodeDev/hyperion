@@ -92,6 +92,29 @@ pack:
   status-pack: " <muted>Pack: <text><size>, <files> files<muted> (<hash>)"
   status-players: " <muted>Players: <success><loaded> loaded<muted>, <text><pending> downloading<muted>, <warning><declined> declined<muted>, <error><failed> failed"
 
+# /hy spawn and /hy attach
+spawn:
+  spawned: "<prefix><text>Spawned <highlight><model></highlight> where you stand."
+  attached: "<prefix><text>Put <highlight><model></highlight> on <highlight><entity></highlight>."
+  no-target: "<prefix><error>Look at an entity within <distance> blocks."
+  failed: "<prefix><error>The model could not be spawned: <reason>"
+  pack-not-built: "<prefix><warning>The resource pack is not built yet; the model shows once it is."
+
+# /hy remove
+remove:
+  removed: "<prefix><text>Removed <highlight><count></highlight> model(s)."
+  none: "<prefix><muted>No model within <radius> blocks."
+  gone: "<prefix><error>That model is already gone."
+
+# /hy near
+near:
+  heading: "<primary>Models nearby <dim>(<count>)"
+  entry: " <text><model><muted>  <distance> blocks away, <anchor>"
+  entry-hover: "<muted>Remove this model"
+  on-entity: "on <entity>"
+  standing: "on its own"
+  none: "<prefix><muted>No model within <radius> blocks."
+
 # Mistakes when typing a command
 command:
   usage: "<prefix><error>Usage: <muted><syntax>"

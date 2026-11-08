@@ -48,6 +48,10 @@ class HyperionConfigTest {
         assertFalse(pack.required());
         assertEquals("paper", pack.baseItem());
         assertEquals(10_000, pack.customModelDataStart());
+
+        ModelSettings models = HyperionConfig.of(this.bundled, this.logger, ITEMS).models();
+        assertEquals(48, models.viewDistance());
+        assertEquals(3, models.interpolation());
     }
 
     @Test
@@ -69,6 +73,16 @@ class HyperionConfigTest {
         assertEquals(PackHosting.SELF_HOST, pack.hosting());
         assertEquals(8163, pack.port());
         assertEquals("paper", pack.baseItem());
+    }
+
+    @Test
+    void fallsBackOnModelValuesItCannotUse() {
+        this.bundled.set("models.view-distance", 0);
+        this.bundled.set("models.interpolation", -1);
+        ModelSettings models = HyperionConfig.of(this.bundled, this.logger, ITEMS).models();
+
+        assertEquals(48, models.viewDistance());
+        assertEquals(3, models.interpolation());
     }
 
     @Test

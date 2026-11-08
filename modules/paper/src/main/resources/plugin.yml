@@ -22,6 +22,8 @@ permissions:
       hyperion.command.pack.send: true
       hyperion.command.pack.status: true
       hyperion.command.pack.export: true
+      hyperion.command.spawn: true
+      hyperion.command.remove: true
   hyperion.command.help:
     description: See the Hyperion help menu.
     default: op
@@ -48,4 +50,10 @@ permissions:
     default: op
   hyperion.command.pack.export:
     description: Write the resource pack into the data folder.
+    default: op
+  hyperion.command.spawn:
+    description: Spawn a model where you stand or put one on an entity.
+    default: op
+  hyperion.command.remove:
+    description: List the models nearby and remove them.
     default: op
