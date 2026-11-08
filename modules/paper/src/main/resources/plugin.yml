@@ -1,0 +1,19 @@
+name: Hyperion
+version: '${version}'
+main: dev.vertcode.hyperion.HyperionPlugin
+api-version: '26.3'
+folia-supported: true
+depend: [packetevents]
+description: Animated Blockbench models for bosses, NPCs, pets and props, with the resource pack built for you.
+authors: [VertCode Development]
+website: https://github.com/VertCodeDev/hyperion
+
+permissions:
+  hyperion.admin:
+    description: Every Hyperion command.
+    default: op
+    children:
+      hyperion.command.help: true
+  hyperion.command.help:
+    description: See the Hyperion help menu.
+    default: op

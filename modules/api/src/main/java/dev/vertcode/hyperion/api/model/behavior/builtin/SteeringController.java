@@ -1,7 +1,6 @@
 package dev.vertcode.hyperion.api.model.behavior.builtin;
 
 import org.bukkit.Input;
-import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
@@ -33,9 +32,10 @@ record SteeringController(float speed, float jumpVelocity, boolean flies) implem
 
     @Override
     public Vector steer(final Player rider, final Entity vehicle, final Input input) {
-        Location view = rider.getLocation();
-        double yaw = Math.toRadians(view.getYaw());
-        Vector ahead = this.flies ? view.getDirection() : new Vector(-Math.sin(yaw), 0, Math.cos(yaw));
+        double yaw = Math.toRadians(rider.getYaw());
+        double pitch = this.flies ? Math.toRadians(rider.getPitch()) : 0;
+        double flat = Math.cos(pitch);
+        Vector ahead = new Vector(-Math.sin(yaw) * flat, -Math.sin(pitch), Math.cos(yaw) * flat);
         Vector left = new Vector(Math.cos(yaw), 0, Math.sin(yaw));
 
         Vector movement = ahead.multiply(axis(input.isForward(), input.isBackward()))

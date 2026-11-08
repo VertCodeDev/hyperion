@@ -2,9 +2,14 @@
 java = "25"
 paper = "26.3.build.174-beta"
 packetevents = "2.14.0"
+cloud = "2.1.0"
+cloud-minecraft = "2.0.1"
 lombok = "1.18.46"
 annotations = "26.0.2"
 jspecify = "1.0.0"
+errorprone = "2.52.0"
+errorprone-gradle = "5.2.0"
+nullaway = "0.14.3"
 junit = "5.12.1"
 junit-platform = "1.12.1"
 run-paper = "3.0.2"
@@ -13,9 +18,15 @@ shadow = "9.6.1"
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
 packetevents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetevents" }
+cloud-annotations = { module = "org.incendo:cloud-annotations", version.ref = "cloud" }
+cloud-paper = { module = "org.incendo:cloud-paper", version.ref = "cloud-minecraft" }
+cloud-minecraft-extras = { module = "org.incendo:cloud-minecraft-extras", version.ref = "cloud-minecraft" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+errorprone-gradle = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-gradle" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 
