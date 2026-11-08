@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import net.kyori.adventure.key.Key;
 import org.bukkit.Location;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Unmodifiable;
@@ -63,6 +64,13 @@ public interface Bone extends BoneAppearance<Bone> {
     @Unmodifiable List<Bone> children();
 
     /**
+     * Return every bone below this one: children, their children and so on, parents first.
+     *
+     * @return the descendants, not including this bone
+     */
+    @Unmodifiable List<Bone> descendants();
+
+    /**
      * Return where the bone's pivot is in the world, animation included, as of the last frame.
      *
      * @return a copy of the location
@@ -75,6 +83,31 @@ public interface Bone extends BoneAppearance<Bone> {
      * @return the world rotation
      */
     Quaternionfc rotation();
+
+    /**
+     * Add a modifier that changes this bone's transform every frame, or replace the one with the
+     * same key. Safe from any thread; it starts on the next frame.
+     *
+     * @param key the modifier's key, in your plugin's namespace
+     * @param modifier the modifier
+     * @return this bone
+     */
+    Bone modifier(Key key, BoneModifier modifier);
+
+    /**
+     * Remove a modifier. Safe from any thread.
+     *
+     * @param key the modifier's key
+     * @return whether a modifier was removed
+     */
+    boolean removeModifier(Key key);
+
+    /**
+     * Return the keys of this bone's modifiers, in the order they run.
+     *
+     * @return the modifier keys
+     */
+    @Unmodifiable List<Key> modifiers();
 
     /**
      * Return every behavior attached to this bone.

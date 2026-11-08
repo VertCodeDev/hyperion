@@ -6,14 +6,15 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 /**
- * How a model, a bone or one player's view of them looks: visibility, tint, glow and light.
+ * How a model, a bone or one player's view of them looks: visibility, tint, glow, glint, light
+ * and billboard.
  *
  * <p>Setters return this object so calls chain. They are safe from any thread: they record the
  * wanted look, and the model applies it on its next frame and sends only what changed.
  *
- * <p>A bone shows when both it and its model are visible. A bone glows when either it or its
- * model glows. Tint, glow color and brightness set on a bone win over the model's; null falls
- * back to the model.
+ * <p>A bone shows when both it and its model are visible. A bone glows, or shimmers with the
+ * enchant glint, when either it or its model does. Tint, glow color, brightness and billboard set
+ * on a bone win over the model's; null falls back to the model.
  *
  * @param <S> the type setters return, so a chain keeps the concrete type
  */
@@ -79,6 +80,36 @@ public interface Appearance<S extends Appearance<S>> {
      * @return this object
      */
     S glowColor(@Nullable Color color);
+
+    /**
+     * Return whether this shimmers with the enchant glint.
+     *
+     * @return true when it has the glint
+     */
+    boolean glint();
+
+    /**
+     * Turn the enchant glint on or off, as on an enchanted item.
+     *
+     * @param glint true for the glint
+     * @return this object
+     */
+    S glint(boolean glint);
+
+    /**
+     * Return how this turns to face the viewer.
+     *
+     * @return the billboard, or null to stay as the model is posed
+     */
+    Display.@Nullable Billboard billboard();
+
+    /**
+     * Turn this to face each viewer, like a name tag, on one axis or both.
+     *
+     * @param billboard the billboard, or null to stay as the model is posed
+     * @return this object
+     */
+    S billboard(Display.@Nullable Billboard billboard);
 
     /**
      * Return the fixed light level.

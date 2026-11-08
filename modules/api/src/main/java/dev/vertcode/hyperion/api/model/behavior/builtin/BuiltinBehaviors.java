@@ -32,6 +32,18 @@ public final class BuiltinBehaviors {
     public static final Key NAMETAG = Key.key("hyperion", "nametag");
 
     /**
+     * Shows what the carrying entity holds in its main hand, through
+     * {@code ItemSource.mainHand()}. Bones named {@code main_hand*}.
+     */
+    public static final Key MAIN_HAND = Key.key("hyperion", "main_hand");
+
+    /**
+     * Shows what the carrying entity holds in its off hand, through
+     * {@code ItemSource.offHand()}. Bones named {@code off_hand*}.
+     */
+    public static final Key OFF_HAND = Key.key("hyperion", "off_hand");
+
+    /**
      * A bone that never renders, kept for logic and locators. Bones named {@code ghost_*}.
      */
     public static final Key GHOST = Key.key("hyperion", "ghost");

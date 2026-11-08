@@ -1,5 +1,7 @@
 package dev.vertcode.hyperion.api.model;
 
+import java.util.Set;
+
 import org.bukkit.Color;
 import org.bukkit.entity.Display;
 import org.jetbrains.annotations.ApiStatus;
@@ -57,12 +59,46 @@ public interface SpawnOptions {
     SpawnOptions viewers(ViewerPolicy policy);
 
     /**
-     * Hide or show the entity carrying the model. Ignored for a model on its own.
+     * Work out the scale every frame in place of a fixed one.
      *
-     * @param hidden true to hide the entity; true by default
+     * @param scaler the scaler
      * @return these options
      */
-    SpawnOptions baseEntityHidden(boolean hidden);
+    SpawnOptions scaler(ModelScaler scaler);
+
+    /**
+     * Work out which way the model faces every frame.
+     *
+     * @param rotator the rotator; {@link ModelRotator#anchor()} by default
+     * @return these options
+     */
+    SpawnOptions rotator(ModelRotator rotator);
+
+    /**
+     * Set over how many ticks viewers' clients smooth each move between frames.
+     *
+     * @param ticks the interpolation in ticks, 0 or more; the config value by default
+     * @return these options
+     * @throws IllegalArgumentException if the ticks are below 0
+     */
+    SpawnOptions interpolation(int ticks);
+
+    /**
+     * Choose which parts of the entity carrying the model are hidden. Ignored for a model on its
+     * own.
+     *
+     * @param parts the parts to hide, copied; {@link EntityPart#ALL} by default
+     * @return these options
+     */
+    SpawnOptions hiddenParts(Set<EntityPart> parts);
+
+    /**
+     * Hide or show the whole entity carrying the model. Ignored for a model on its own.
+     *
+     * @param hidden true to hide every part; true by default
+     * @return these options
+     */
+    SpawnOptions hideBaseEntity(boolean hidden);
 
     /**
      * Tint the whole model.
@@ -95,6 +131,22 @@ public interface SpawnOptions {
      * @return these options
      */
     SpawnOptions brightness(Display.@Nullable Brightness brightness);
+
+    /**
+     * Give the whole model the enchant glint.
+     *
+     * @param glint true for the glint
+     * @return these options
+     */
+    SpawnOptions glint(boolean glint);
+
+    /**
+     * Turn the whole model to face each viewer.
+     *
+     * @param billboard the billboard, or null to stay as posed
+     * @return these options
+     */
+    SpawnOptions billboard(Display.@Nullable Billboard billboard);
 
     /**
      * Play an animation from the first frame.

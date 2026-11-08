@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.bukkit.entity.Entity;
 import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.model.behavior.BoneBehavior;
 
@@ -52,4 +53,20 @@ public interface SeatBehavior extends BoneBehavior {
      * @return this behavior
      */
     SeatBehavior locked(boolean locked);
+
+    /**
+     * Return what lets the rider steer the entity carrying the model.
+     *
+     * @return the controller, or null when the rider only rides along
+     */
+    @Nullable SeatController controller();
+
+    /**
+     * Let the rider steer the entity carrying the model. Safe from any thread. Has no effect on a
+     * model on its own, which has nothing to move.
+     *
+     * @param controller the controller, or null to let the rider only ride along
+     * @return this behavior
+     */
+    SeatBehavior controller(@Nullable SeatController controller);
 }

@@ -2,7 +2,9 @@ package dev.vertcode.hyperion.api.model;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -74,6 +76,18 @@ public interface Model extends Appearance<Model> {
     Optional<Bone> bone(String name);
 
     /**
+     * Return the bones that pass a test, parents first. Handy to change many bones at once:
+     *
+     * <pre>{@code
+     * model.bones(bone -> bone.name().startsWith("wing")).forEach(wing -> wing.tint(Color.RED));
+     * }</pre>
+     *
+     * @param filter the test a bone must pass
+     * @return the bones that pass
+     */
+    @Unmodifiable List<Bone> bones(Predicate<Bone> filter);
+
+    /**
      * Return every locator.
      *
      * @return the locators
@@ -104,14 +118,15 @@ public interface Model extends Appearance<Model> {
     Model transform(BoneTransform transform);
 
     /**
-     * Return the uniform scale of the whole model.
+     * Return the uniform scale of the whole model, as of the last frame.
      *
      * @return the scale, 1 by default
      */
     float scale();
 
     /**
-     * Scale the whole model, hitboxes and seats included.
+     * Scale the whole model, hitboxes and seats included. Same as
+     * {@code scaler(ModelScaler.fixed(scale))}.
      *
      * @param scale the scale, above 0
      * @return this model
@@ -120,19 +135,83 @@ public interface Model extends Appearance<Model> {
     Model scale(float scale);
 
     /**
-     * Return whether the entity carrying this model is hidden from viewers.
+     * Return what works out the model's scale every frame.
      *
-     * @return true when hidden; always false for a model on its own
+     * @return the scaler
      */
-    boolean baseEntityHidden();
+    ModelScaler scaler();
 
     /**
-     * Hide or show the entity carrying this model. Has no effect on a model on its own.
+     * Work out the model's scale every frame, so it can follow the game.
      *
-     * @param hidden true to hide the entity
+     * @param scaler the scaler
      * @return this model
      */
-    Model baseEntityHidden(boolean hidden);
+    Model scaler(ModelScaler scaler);
+
+    /**
+     * Return which way the whole model faces, as of the last frame.
+     *
+     * @return the rotation
+     */
+    ModelRotation rotation();
+
+    /**
+     * Return what works out which way the model faces every frame.
+     *
+     * @return the rotator, {@link ModelRotator#anchor()} by default
+     */
+    ModelRotator rotator();
+
+    /**
+     * Work out which way the model faces every frame, starting from what its anchor says.
+     *
+     * @param rotator the rotator
+     * @return this model
+     */
+    Model rotator(ModelRotator rotator);
+
+    /**
+     * Return over how many ticks viewers' clients smooth each move between frames.
+     *
+     * @return the interpolation in ticks
+     */
+    int interpolation();
+
+    /**
+     * Set over how many ticks viewers' clients smooth each move between frames. Higher is
+     * smoother but lags behind; 0 snaps every frame.
+     *
+     * @param ticks the interpolation in ticks, 0 or more; the config value by default
+     * @return this model
+     * @throws IllegalArgumentException if the ticks are below 0
+     */
+    Model interpolation(int ticks);
+
+    /**
+     * Return which parts of the entity carrying this model are hidden from viewers.
+     *
+     * @return the hidden parts; always empty for a model on its own
+     */
+    @Unmodifiable Set<EntityPart> hiddenParts();
+
+    /**
+     * Choose which parts of the entity carrying this model are hidden from viewers. Has no effect
+     * on a model on its own.
+     *
+     * @param parts the parts to hide, copied; {@link EntityPart#NONE} shows the whole entity
+     * @return this model
+     */
+    Model hiddenParts(Set<EntityPart> parts);
+
+    /**
+     * Hide or show the whole entity carrying this model. Same as {@code hiddenParts(ALL)} or
+     * {@code hiddenParts(NONE)}.
+     *
+     * @param hidden true to hide every part
+     * @return this model
+     */
+    Model hideBaseEntity(boolean hidden);
 
     /**
      * Move a model that stands on its own.
