@@ -59,7 +59,7 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 |---|---|---|
 | `/hy` | none | Staff get the help menu; everyone else sees which plugin draws the models |
 | `/hy help [query]` | `hyperion.command.help` | The paged help menu, filtered by a search |
-| `/hy list [filter]` | `hyperion.command.list` | Every loaded model with its counts, each a click away from its info |
+| `/hy list [filter] [--page <page>]` | `hyperion.command.list` | Every loaded model with its counts, ten to a page with buttons between pages, each a click away from its info |
 | `/hy info <model>` | `hyperion.command.info` | Source, size, bone tree, animations, locators and warnings |
 | `/hy reload [model]` | `hyperion.command.reload` | Load every model again, or one, and show what changed |
 | `/hy validate [model]` | `hyperion.command.validate` | The warnings and errors from the last load |
