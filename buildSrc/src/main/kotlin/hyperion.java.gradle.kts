@@ -1,5 +1,5 @@
 // Every module: the Java toolchain from the version catalog, UTF-8, -parameters, Lombok,
-// JetBrains annotations and JUnit 5.
+// JSpecify and JetBrains annotations, and JUnit 5.
 plugins {
     java
 }
@@ -30,6 +30,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    compileOnly(libs.findLibrary("jspecify").get())
     compileOnly(libs.findLibrary("jetbrains-annotations").get())
     compileOnly(libs.findLibrary("lombok").get())
     annotationProcessor(libs.findLibrary("lombok").get())
