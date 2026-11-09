@@ -47,6 +47,7 @@ import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.ModelSpawner;
 import dev.vertcode.hyperion.config.ModelSettings;
 import dev.vertcode.hyperion.config.PackSettings;
+import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.pack.ResourcePack;
 import dev.vertcode.hyperion.render.PartItems;
 
@@ -73,6 +74,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
     private final Map<UUID, HyperionModel> models = new ConcurrentHashMap<>();
     private final Map<Integer, List<HyperionModel>> byEntity = new ConcurrentHashMap<>();
     private final ModelInteractions interactions = new ModelInteractions();
+    private final DebugViews debug;
     private volatile ModelEffects effects = ModelEffects.NONE;
     private volatile ModelSettings settings;
     private volatile PartItems items;
@@ -90,6 +92,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
      * @param version the server's version, which decides how parts name their model
      * @param settings the model settings from {@code config.yml}
      * @param pack the pack settings from {@code config.yml}, for the base item
+     * @param debug the debug views models draw
      */
     public ModelManager(
             final Plugin plugin,
@@ -97,9 +100,11 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
             final HyperionBehaviorRegistry behaviors,
             final MinecraftVersion version,
             final ModelSettings settings,
-            final PackSettings pack
+            final PackSettings pack,
+            final DebugViews debug
     ) {
         this.plugin = plugin;
+        this.debug = debug;
         this.carrierKey = new NamespacedKey(plugin, "carrier");
         this.registry = registry;
         this.behaviors = behaviors;
@@ -504,6 +509,15 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
      */
     public ModelInteractions interactions() {
         return this.interactions;
+    }
+
+    /**
+     * Return the debug views models draw.
+     *
+     * @return the views
+     */
+    public DebugViews debug() {
+        return this.debug;
     }
 
     /**

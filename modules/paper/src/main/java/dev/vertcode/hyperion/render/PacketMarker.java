@@ -147,6 +147,15 @@ public final class PacketMarker {
     }
 
     /**
+     * Return who has the marker now.
+     *
+     * @return their ids, a copy
+     */
+    public Set<UUID> viewers() {
+        return Set.copyOf(this.shown.keySet());
+    }
+
+    /**
      * Return whether anyone has the marker.
      *
      * @return true when it is shown to at least one player

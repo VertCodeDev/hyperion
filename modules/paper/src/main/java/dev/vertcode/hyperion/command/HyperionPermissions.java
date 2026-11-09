@@ -76,6 +76,16 @@ public final class HyperionPermissions {
     public static final String EFFECT = "hyperion.command.effect";
 
     /**
+     * Show bones, hitboxes, locators, seats and effects, through {@code /hyperion debug}.
+     */
+    public static final String DEBUG = "hyperion.command.debug";
+
+    /**
+     * Browse, preview and spawn every model and effect, through {@code /hyperion gallery}.
+     */
+    public static final String GALLERY = "hyperion.command.gallery";
+
+    /**
      * Open a model's menu by sneaking and right-clicking it.
      */
     public static final String MENU = "hyperion.menu";

@@ -82,6 +82,20 @@ effects:
   # Scales every particle count: 0.5 halves them on a busy server, 0 sends none.
   particle-multiplier: 1.0
 
+# /hy debug: bones, hitboxes, locators, seats and effects drawn for the player who asks.
+debug:
+  # Ticks between redraws. Higher draws less often and sends fewer particles.
+  interval: 4
+  # Bone, locator, seat and effect part names as floating text. Off for very busy models.
+  labels: true
+  # How long a bone's axes are, in blocks.
+  axis-length: 0.4
+
+# /hy gallery: every model and effect in a menu.
+gallery:
+  # How long a private preview stays before it goes, in seconds.
+  preview-seconds: 120
+
 # The resource pack that holds every model.
 pack:
   # How players get the pack:

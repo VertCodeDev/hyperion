@@ -28,8 +28,17 @@ import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
  * @param models the settings live models start with
  * @param bedrock the Bedrock settings
  * @param effects the effect settings
+ * @param debug how the debug views draw
+ * @param gallery the gallery settings
  */
-public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSettings bedrock, EffectSettings effects) {
+public record HyperionConfig(
+        PackSettings pack,
+        ModelSettings models,
+        BedrockSettings bedrock,
+        EffectSettings effects,
+        DebugSettings debug,
+        GallerySettings gallery
+) {
 
     /**
      * The file name, in the data folder and in the jar.
@@ -56,6 +65,9 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
     private static final float MAX_PITCH = 90f;
     private static final Map<String, Key> BEHAVIOR_NAMES = behaviorNames();
     private static final int DEFAULT_EFFECT_DISTANCE = 32;
+    private static final int DEFAULT_DEBUG_INTERVAL = 4;
+    private static final float DEFAULT_AXIS_LENGTH = 0.4f;
+    private static final int DEFAULT_PREVIEW_SECONDS = 120;
 
     /**
      * Read {@code config.yml} from the data folder, writing or completing it from the jar first.
@@ -146,7 +158,47 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
         float multiplier = (float) Math.max(0d, config.getDouble("effects.particle-multiplier", 1d));
         EffectSettings effects = new EffectSettings(effectDistance, multiplier);
 
-        return new HyperionConfig(pack, models, bedrock, effects);
+        return new HyperionConfig(pack, models, bedrock, effects, debug(config, logger), gallery(config, logger));
+    }
+
+    /**
+     * Read how the debug views draw.
+     *
+     * @param config the contents of {@code config.yml}
+     * @param logger where unusable values are reported
+     * @return the settings
+     */
+    private static DebugSettings debug(final ConfigurationSection config, final Logger logger) {
+        int interval = config.getInt("debug.interval", DEFAULT_DEBUG_INTERVAL);
+        if (interval < 1) {
+            logger.warning(String.format(BAD_VALUE, interval, "debug.interval", DEFAULT_DEBUG_INTERVAL));
+            interval = DEFAULT_DEBUG_INTERVAL;
+        }
+
+        float axisLength = (float) config.getDouble("debug.axis-length", DEFAULT_AXIS_LENGTH);
+        if (!(axisLength > 0f)) {
+            logger.warning(String.format(BAD_VALUE, axisLength, "debug.axis-length", DEFAULT_AXIS_LENGTH));
+            axisLength = DEFAULT_AXIS_LENGTH;
+        }
+
+        return new DebugSettings(interval, config.getBoolean("debug.labels", true), axisLength);
+    }
+
+    /**
+     * Read the gallery settings.
+     *
+     * @param config the contents of {@code config.yml}
+     * @param logger where unusable values are reported
+     * @return the settings
+     */
+    private static GallerySettings gallery(final ConfigurationSection config, final Logger logger) {
+        int seconds = config.getInt("gallery.preview-seconds", DEFAULT_PREVIEW_SECONDS);
+        if (seconds < 1) {
+            logger.warning(String.format(BAD_VALUE, seconds, "gallery.preview-seconds", DEFAULT_PREVIEW_SECONDS));
+            seconds = DEFAULT_PREVIEW_SECONDS;
+        }
+
+        return new GallerySettings(seconds);
     }
 
     /**

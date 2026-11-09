@@ -28,6 +28,7 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.BoundingBox;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
@@ -72,6 +73,7 @@ import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintBone;
 import dev.vertcode.hyperion.blueprint.BlueprintLocator;
 import dev.vertcode.hyperion.config.AutoAnimations;
+import dev.vertcode.hyperion.debug.DebugLabels;
 import dev.vertcode.hyperion.pack.ModelPart;
 import dev.vertcode.hyperion.pack.ResourcePack;
 import dev.vertcode.hyperion.render.BaseEntityData;
@@ -169,6 +171,7 @@ final class HyperionModel implements Model {
     private final HitboxMode hitboxMode;
     private final List<ModelTask> tasks = new ArrayList<>();
     private @Nullable ModelBox box;
+    private @Nullable DebugLabels debugLabels;
     private int stillTicks = STILL_TICKS;
     private double lastX;
     private double lastZ;
@@ -270,6 +273,7 @@ final class HyperionModel implements Model {
 
         this.updateViewers(here);
         if (this.viewers.isEmpty()) {
+            this.drawDebug();
             this.runTasks();
             return;
         }
@@ -277,7 +281,28 @@ final class HyperionModel implements Model {
         this.render(here);
         this.publishBedrock();
         this.afterFrame();
+        this.drawDebug();
         this.runTasks();
+    }
+
+    /**
+     * Draw the debug views of the viewers who have one on, now that everything is placed.
+     */
+    private void drawDebug() {
+        if (this.debugLabels == null && !this.manager.debug().watching()) {
+            return;
+        }
+
+        List<Player> java = new ArrayList<>();
+        for (Viewer viewer : this.viewers.viewers()) {
+            if (!viewer.bedrock()) {
+                java.add(viewer.player());
+            }
+        }
+
+        ModelBox current = this.box;
+        BoundingBox bounds = current == null ? null : current.bounds();
+        this.debugLabels = this.manager.debug().drawModel(this, bounds, java, this.ticks, this.debugLabels);
     }
 
     /**
@@ -1758,6 +1783,7 @@ final class HyperionModel implements Model {
 
         this.dropBedrock(bedrock);
         this.removeBox();
+        this.removeDebugLabels();
 
         for (HyperionBone bone : this.bones) {
             for (BoneBehavior behavior : bone.behaviors()) {
@@ -1812,8 +1838,20 @@ final class HyperionModel implements Model {
 
         this.dropBedrock(bedrock);
         this.removeBox();
+        this.removeDebugLabels();
         this.tasks.clear();
         this.manager.forget(this);
+    }
+
+    /**
+     * Take the debug labels down, when a debugger had any up.
+     */
+    private void removeDebugLabels() {
+        DebugLabels labels = this.debugLabels;
+        if (labels != null) {
+            labels.clear();
+            this.debugLabels = null;
+        }
     }
 
     /**

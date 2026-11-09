@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -51,6 +52,7 @@ import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.LoadReport;
 import dev.vertcode.hyperion.blueprint.metadata.JsonMetadata;
 import dev.vertcode.hyperion.config.EffectSettings;
+import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.effect.part.BuiltinParts;
 import dev.vertcode.hyperion.effect.part.CameraLock;
 import dev.vertcode.hyperion.effect.part.PartServices;
@@ -103,6 +105,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
     private final Set<EffectShow> playing = ConcurrentHashMap.newKeySet();
     private final Set<String> warned = ConcurrentHashMap.newKeySet();
     private final CameraLock cameras;
+    private final DebugViews debug;
     private volatile EffectSettings settings;
 
     /**
@@ -112,14 +115,17 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
      * @param models the live models, which effects on a model run inside
      * @param blueprints the models, for the effects they carry
      * @param settings the {@code effects} section of {@code config.yml}
+     * @param debug the debug views effects draw
      */
     public HyperionEffects(
             final Plugin plugin,
             final ModelManager models,
             final BlueprintRegistry blueprints,
-            final EffectSettings settings
+            final EffectSettings settings,
+            final DebugViews debug
     ) {
         this.plugin = plugin;
+        this.debug = debug;
         this.models = models;
         this.blueprints = blueprints;
         this.settings = settings;
@@ -136,6 +142,15 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
      */
     public CameraLock cameras() {
         return this.cameras;
+    }
+
+    /**
+     * Return the debug views effects draw.
+     *
+     * @return the views
+     */
+    DebugViews debug() {
+        return this.debug;
     }
 
     // Loading
@@ -399,6 +414,20 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         this.embedded.put(model, new Embedded(blueprint, effectsOfModel));
 
         return effectsOfModel;
+    }
+
+    /**
+     * Return a model's own effects, from its {@code hyperion_effects}, sorted by key.
+     *
+     * @param model the model's key
+     * @return the effects, empty when it has none
+     */
+    public List<Effect> ofModel(final Key model) {
+        List<Effect> found = new ArrayList<>();
+        this.embedded(model).values().forEach(registered -> found.add(registered.effect()));
+        found.sort(Comparator.comparing(effect -> effect.key().asString()));
+
+        return List.copyOf(found);
     }
 
     @Override

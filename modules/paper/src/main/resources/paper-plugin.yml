@@ -41,6 +41,8 @@ permissions:
       hyperion.command.remove: true
       hyperion.command.animate: true
       hyperion.command.effect: true
+      hyperion.command.debug: true
+      hyperion.command.gallery: true
       hyperion.menu: true
   hyperion.command.help:
     description: See the Hyperion help menu.
@@ -80,6 +82,12 @@ permissions:
     default: op
   hyperion.command.effect:
     description: Play, stop and list effects.
+    default: op
+  hyperion.command.debug:
+    description: See bones, hitboxes, locators, seats and effects on the models near you.
+    default: op
+  hyperion.command.gallery:
+    description: Browse, preview and spawn every model and effect in a menu.
     default: op
   hyperion.menu:
     description: Open a model's menu by sneaking and right-clicking it.

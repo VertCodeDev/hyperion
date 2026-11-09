@@ -142,4 +142,24 @@ class HyperionConfigTest {
 
         assertEquals("leather_horse_armor", HyperionConfig.of(this.bundled, this.logger, ITEMS).pack().baseItem());
     }
+
+    @Test
+    void readsTheDebugAndGallerySections() {
+        HyperionConfig config = HyperionConfig.of(this.bundled, this.logger, ITEMS);
+
+        assertEquals(new DebugSettings(4, true, 0.4f), config.debug());
+        assertEquals(120, config.gallery().previewSeconds());
+    }
+
+    @Test
+    void fallsBackOnDebugValuesItCannotUse() {
+        this.bundled.set("debug.interval", 0);
+        this.bundled.set("debug.axis-length", -1);
+        this.bundled.set("gallery.preview-seconds", 0);
+        HyperionConfig config = HyperionConfig.of(this.bundled, this.logger, ITEMS);
+
+        assertEquals(4, config.debug().interval());
+        assertEquals(0.4f, config.debug().axisLength());
+        assertEquals(120, config.gallery().previewSeconds());
+    }
 }

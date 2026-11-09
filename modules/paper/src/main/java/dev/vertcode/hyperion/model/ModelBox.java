@@ -32,6 +32,7 @@ final class ModelBox implements HitboxTarget {
     private final PacketMarker marker = new PacketMarker(EntityTypes.INTERACTION);
     private float width;
     private float height;
+    private @Nullable BoundingBox bounds;
 
     /**
      * Create the box and note it, so clicks on it are found.
@@ -69,7 +70,25 @@ final class ModelBox implements HitboxTarget {
                 (float) box.getCenterZ()
         ));
         Location at = this.model.location().add(bottom.x, bottom.y, bottom.z);
+        float half = nextWidth / 2f;
+        this.bounds = new BoundingBox(
+                at.getX() - half,
+                at.getY(),
+                at.getZ() - half,
+                at.getX() + half,
+                at.getY() + nextHeight,
+                at.getZ() + half
+        );
         this.marker.place(at, viewers, this.riders(), () -> MarkerData.interaction(nextWidth, nextHeight));
+    }
+
+    /**
+     * Return where the box was put last frame, for the hitboxes debug view.
+     *
+     * @return the box in the world, or null before its first frame
+     */
+    @Nullable BoundingBox bounds() {
+        return this.bounds;
     }
 
     /**
@@ -85,6 +104,7 @@ final class ModelBox implements HitboxTarget {
      * Remove the box from everyone and forget it.
      */
     void remove() {
+        this.bounds = null;
         this.marker.hideAll();
         this.index.forgetHitbox(this.marker.entityId());
     }

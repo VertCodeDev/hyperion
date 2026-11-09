@@ -32,6 +32,8 @@ import dev.vertcode.hyperion.api.event.EffectStartEvent;
 import dev.vertcode.hyperion.api.model.Model;
 import dev.vertcode.hyperion.api.model.bone.Bone;
 import dev.vertcode.hyperion.api.model.locator.Locator;
+import dev.vertcode.hyperion.debug.DebugEffect;
+import dev.vertcode.hyperion.debug.DebugLabels;
 import dev.vertcode.hyperion.model.ModelTask;
 
 /**
@@ -66,6 +68,7 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     private boolean started;
     private int cursor;
     private @Nullable List<Player> viewersNow;
+    private @Nullable DebugLabels debugLabels;
 
     /**
      * Prepare a play. Nothing runs until its first tick.
@@ -128,6 +131,10 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
                     this.act(part, frame);
                 }
             }
+        }
+
+        if (this.debugLabels != null || this.effects.debug().watching()) {
+            this.debugLabels = this.effects.debug().drawEffect(this::debugged, this.viewers(), this.tick, this.debugLabels);
         }
 
         if (this.tick >= this.compiled.effect().duration()) {
@@ -207,6 +214,11 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
             }
         }
 
+        if (this.debugLabels != null) {
+            this.debugLabels.clear();
+            this.debugLabels = null;
+        }
+
         if (this.started) {
             Bukkit.getPluginManager().callEvent(new EffectEndEvent(this, finished));
         }
@@ -221,6 +233,34 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     @Override
     public void cancel() {
         this.end(false);
+    }
+
+    /**
+     * Describe this tick for the effects debug view: the anchor, where each {@code at} resolved
+     * and where each part with a spot is.
+     *
+     * @return what to draw
+     */
+    private DebugEffect debugged() {
+        Map<String, Location> ats = new LinkedHashMap<>();
+        for (Map.Entry<String, @Nullable Placement> entry : this.placements.entrySet()) {
+            Placement placement = entry.getValue();
+            if (!entry.getKey().equals(ANCHOR) && placement != null) {
+                ats.put(entry.getKey(), placement.origin());
+            }
+        }
+
+        Map<String, Location> parts = new LinkedHashMap<>();
+        List<EffectPart> shapes = this.compiled.effect().parts();
+        for (int i = 0; i < this.actors.length; i++) {
+            EffectActor actor = this.actors[i];
+            Location there = actor == null ? null : actor.location();
+            if (there != null) {
+                parts.put(shapes.get(i).name(), there);
+            }
+        }
+
+        return new DebugEffect(this.key(), this.tick, this.compiled.effect().duration(), this.location, ats, parts);
     }
 
     /**

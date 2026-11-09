@@ -21,10 +21,12 @@ import org.incendo.cloud.paper.util.sender.Source;
 import dev.vertcode.hyperion.HyperionPlugin;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
-import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.config.MessagePalette;
+import dev.vertcode.hyperion.debug.DebugViews;
+import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackManager;
+import dev.vertcode.hyperion.ui.Gallery;
 
 import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
@@ -59,13 +61,17 @@ public final class HyperionCommands {
      * @param packs the resource pack the pack commands build and send
      * @param models the live models the spawn and remove commands work on
      * @param effects the effects the effect commands play
+     * @param debug the debug views the debug command switches
+     * @param gallery the gallery the gallery command opens
      */
     public static void register(
             final HyperionPlugin plugin,
             final BlueprintRegistry registry,
             final PackManager packs,
             final ModelManager models,
-            final HyperionEffects effects
+            final HyperionEffects effects,
+            final DebugViews debug,
+            final Gallery gallery
     ) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
@@ -103,7 +109,9 @@ public final class HyperionCommands {
                 new SpawnCommand(plugin, registry, packs, models),
                 new RemoveCommand(models),
                 new AnimateCommand(models),
-                new EffectCommand(effects, models)
+                new EffectCommand(effects, models),
+                new DebugCommand(debug),
+                new GalleryCommand(gallery)
         );
     }
 

@@ -29,6 +29,7 @@ import dev.vertcode.hyperion.command.HyperionCommands;
 import dev.vertcode.hyperion.config.HyperionConfig;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessageBook;
+import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
@@ -38,11 +39,14 @@ import dev.vertcode.hyperion.listener.ModelListener;
 import dev.vertcode.hyperion.listener.PackListener;
 import dev.vertcode.hyperion.listener.RiderInputListener;
 import dev.vertcode.hyperion.listener.SeatListener;
+import dev.vertcode.hyperion.listener.StaffToolListener;
 import dev.vertcode.hyperion.model.HyperionModelRegistry;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackFormat;
 import dev.vertcode.hyperion.pack.PackManager;
+import dev.vertcode.hyperion.ui.Gallery;
 import dev.vertcode.hyperion.ui.Menus;
+import dev.vertcode.hyperion.ui.Previews;
 
 public final class HyperionPlugin extends JavaPlugin {
 
@@ -54,6 +58,8 @@ public final class HyperionPlugin extends JavaPlugin {
     private @Nullable PackManager packs;
     private @Nullable ModelManager models;
     private @Nullable HyperionEffects effects;
+    private @Nullable DebugViews debug;
+    private @Nullable Previews previews;
     private List<PacketListenerCommon> packetListeners = List.of();
     private @Nullable BedrockLink bedrockLink;
 
@@ -90,8 +96,10 @@ public final class HyperionPlugin extends JavaPlugin {
         this.bedrockLink = link;
 
         // Models
+        DebugViews debug = new DebugViews(config.debug());
+        this.debug = debug;
         HyperionBehaviorRegistry behaviors = new HyperionBehaviorRegistry();
-        ModelManager models = new ModelManager(this, registry, behaviors, version, config.models(), config.pack());
+        ModelManager models = new ModelManager(this, registry, behaviors, version, config.models(), config.pack(), debug);
         models.bedrock(bedrock, link);
         BuiltinTypes.register(this, behaviors, models);
         packs.hiddenBones(BuiltinTypes.hidesCubes(() -> models.settings().behaviors()));
@@ -100,7 +108,7 @@ public final class HyperionPlugin extends JavaPlugin {
         this.models = models;
 
         // Effects
-        HyperionEffects effects = new HyperionEffects(this, models, registry, config.effects());
+        HyperionEffects effects = new HyperionEffects(this, models, registry, config.effects(), debug);
         models.effects(effects);
         async.execute(() -> effects.registerFolder(this, HyperionEffects.NAMESPACE, effects.prepareFolder()));
         this.effects = effects;
@@ -116,9 +124,12 @@ public final class HyperionPlugin extends JavaPlugin {
         events.registerEvents(new PackListener(packs), this);
         events.registerEvents(new BedrockListener(bedrock), this);
         Menus menus = Menus.load(this, version);
+        Previews previews = new Previews(this, models, config.gallery());
+        this.previews = previews;
         events.registerEvents(new ModelListener(models, modelRegistry, behaviors, effects, this, menus), this);
         events.registerEvents(new SeatListener(models), this);
         events.registerEvents(new EffectListener(effects.cameras()), this);
+        events.registerEvents(new StaffToolListener(debug, previews), this);
         EventManager packets = PacketEvents.getAPI().getEventManager();
         this.packetListeners = List.of(
                 packets.registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL),
@@ -127,14 +138,19 @@ public final class HyperionPlugin extends JavaPlugin {
         );
 
         // Commands
-        HyperionCommands.register(this, registry, packs, models, effects);
+        Gallery gallery = new Gallery(this, registry, models, effects, previews, menus);
+        HyperionCommands.register(this, registry, packs, models, effects, debug, gallery);
     }
 
     @Override
     public void onDisable() {
-        // Effects, then models
+        // Effects and previews, then models
         if (this.effects != null) {
             this.effects.stopAll();
+        }
+
+        if (this.previews != null) {
+            this.previews.clearAll();
         }
 
         if (this.models != null) {
@@ -180,6 +196,14 @@ public final class HyperionPlugin extends JavaPlugin {
         if (this.effects != null) {
             this.effects.configure(config.effects());
             this.effects.reload();
+        }
+
+        if (this.debug != null) {
+            this.debug.configure(config.debug());
+        }
+
+        if (this.previews != null) {
+            this.previews.configure(config.gallery());
         }
     }
 

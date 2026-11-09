@@ -32,15 +32,16 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
-| `config` | `HyperionConfig`, `ModelSettings`, `BehaviorSettings` and `PackSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
+| `config` | `HyperionConfig`, `ModelSettings`, `BehaviorSettings`, `PackSettings`, `DebugSettings` and `GallerySettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
 | `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it |
 | `model` | `ModelManager` (spawning, the tracker, following reloads), `HyperionModel` and its bones, locators and viewers, and the api's model registry |
 | `render` | The bone and part matrices, the item display's entity data, the items parts show, and the packets |
 | `behavior` | `HyperionBehaviorRegistry`, the behavior types plugins register, and `BuiltinTypes`: the head, hitbox, seat, name tag, hand and ghost behaviors Hyperion ships |
-| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
+| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats, `StaffToolListener` for debug views and previews of players who leave; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
 | `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
 | `animation.molang` | The part of Molang Blockbench keyframes use |
-| `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
+| `ui` | The model menu, the `Gallery` with its `Previews`, and `Menus`, which loads the InvUI module that fits the server |
+| `debug` | `DebugViews` (who has which view on, drawn from inside model and effect frames), the particle shapes, and `DebugLabels`, the floating names |
 | `bedrock` | Telling Bedrock players apart, the Bedrock pack, and the link the Geyser extension follows |
 | `effect` | `HyperionEffects` (loading, finding and playing effects), `EffectLoader` (YAML and model JSON into effects), `CompiledEffect` (an effect's steps, built once) and `EffectShow` (one play) |
 | `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts, events, text, item, block and model props, screen steps and the camera, with `CameraLock` for the players a camera holds |
@@ -83,6 +84,8 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy effect play <effect> [--here] [--camera]` | `hyperion.command.effect` | Play an effect on the nearest model, or where you stand; `--camera` lets its camera take your view |
 | `/hy effect stop` | `hyperion.command.effect` | Stop every effect within 16 blocks |
 | `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
+| `/hy debug [view]` | `hyperion.command.debug` | Show or hide `bones`, `hitboxes`, `locators`, `seats` or `effects` on what is near you, `all` or `off`; without a view, which are on |
+| `/hy gallery [filter] [--effects]` | `hyperion.command.gallery` | Browse, preview and spawn every model, or every effect, in a menu |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
 | `/hy pack send [players]` | `hyperion.command.pack.send` | Offer the pack again, to some players or everyone |
 | `/hy pack status` | `hyperion.command.pack.status` | Hosting, link, size and hash, and how players are doing with it |
@@ -102,6 +105,42 @@ play once (left-click), loop (right-click) or stop (shift-click), and controls t
 switch its idle and walk animations, stop every animation, scale it, make it glow and remove it.
 
 `hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
+
+## Debug views
+
+`/hy debug <view>` draws what a model is made of, for you alone, on every model and effect you
+see. Run it again to hide that view; `/hy debug all` and `/hy debug off` switch every view.
+
+| View | What it draws |
+|---|---|
+| `bones` | Each bone's pivot as a white dot, its X, Y and Z axes in red, green and blue, and its name |
+| `hitboxes` | Each hitbox outline: green when it can be clicked, gray when not. In `MODEL` mode, the one box around the model |
+| `locators` | Each locator as a pink dot with a line the way it faces, and its name |
+| `seats` | Each seat: aqua when empty, orange with the rider's name when taken |
+| `effects` | Each running effect's anchor with its key and tick, where each `at` resolves (such as `locator:mouth`), and where each part is |
+
+Shapes are dust particles only you get, redrawn every `debug.interval` ticks. Names are text
+displays only you know about, turned off with `debug.labels: false` on very busy models. Models
+and effects draw inside their own frames, so a bone's spot is read on the thread that owns it;
+with nobody debugging, a frame pays one map check. Leaving turns your views off.
+
+## Gallery
+
+`/hy gallery [filter]` opens every model whose key contains the filter, sorted by key:
+
+- **Left-click** spawns it on a mob where you stand, like `/hy spawn`.
+- **Right-click** spawns it on its own, like `/hy spawn --static`.
+- **Shift-left-click** shows a private preview: a copy three blocks in front of you, facing you,
+  that only you see.
+- **Shift-right-click** opens the model's page: its animations to play once, loop or stop on
+  your preview, and its own effects to play on it.
+
+`/hy gallery --effects`, or the star at the bottom, lists every effect: left-click plays it on
+the nearest model, right-click where you stand, shift-click with its camera on you.
+
+You have one preview at a time. It goes after `gallery.preview-seconds`, when you leave, or with
+the barrier button. Spawning from the gallery also needs `hyperion.command.spawn`, and playing
+effects `hyperion.command.effect`.
 
 ## Live models
 
