@@ -11,6 +11,7 @@ import dev.vertcode.hyperion.model.ModelManager;
  * @param plugin Hyperion, for scheduling
  * @param blueprints the loaded blueprints, for props that show one
  * @param models the live models, for removing those props from any thread
+ * @param cameras the players a camera holds
  */
-public record PartServices(Plugin plugin, BlueprintRegistry blueprints, ModelManager models) {
+public record PartServices(Plugin plugin, BlueprintRegistry blueprints, ModelManager models, CameraLock cameras) {
 }

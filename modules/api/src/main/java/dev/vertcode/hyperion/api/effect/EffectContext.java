@@ -52,6 +52,13 @@ public interface EffectContext {
     Quaternionf rotation(EffectFrame frame);
 
     /**
+     * Return the players whose view the effect's camera parts may take, as the play named them.
+     *
+     * @return the players still online, empty when the play named none
+     */
+    List<Player> cameraViewers();
+
+    /**
      * Return who sees and hears the effect this tick.
      *
      * @return the players

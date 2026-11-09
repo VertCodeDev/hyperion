@@ -65,6 +65,7 @@ public final class EffectCommand {
      * @param source the player
      * @param name the effect's key, {@code hyperion:} when left out
      * @param here true to play it where the player stands, even near a model
+     * @param camera true to let the effect's camera take the player's view
      */
     @Command(HyperionCommands.ROOT + " effect play <effect>")
     @CommandDescription("Play an effect on the model nearest to you, or where you stand")
@@ -72,7 +73,8 @@ public final class EffectCommand {
     public void play(
             final PlayerSource source,
             @Argument(value = "effect", suggestions = SUGGESTIONS) final String name,
-            @Flag("here") final boolean here
+            @Flag("here") final boolean here,
+            @Flag("camera") final boolean camera
     ) {
         Player player = source.source();
         Key key = key(name);
@@ -86,7 +88,9 @@ public final class EffectCommand {
         Optional<Model> model = here ? Optional.empty() : this.models.nearest(at, RADIUS);
         EffectAnchor anchor = model.map(EffectAnchor::on).orElseGet(() -> EffectAnchor.at(at));
         this.effects.play(effect, anchor, options -> {
-            // Play as made.
+            if (camera) {
+                options.camera(player);
+            }
         });
 
         Component target = model

@@ -11,6 +11,7 @@
 #   title, actionbar, message  Text on each viewer's screen, in MiniMessage, at each keyframe.
 #   command   A console command at each keyframe, %player% for each viewer. Never in models.
 #   time      Each viewer's own sky time; put back when the effect ends.
+#   camera    Moves the view of the players a play names. Try: /hy effect play showcase --camera
 #
 # Keyframes sit at ticks. Numbers and [x, y, z] values move smoothly from one keyframe to the
 # next, eased by the later one's "easing": linear, ease-in, ease-out, ease-in-out, ease-in-back,
@@ -119,3 +120,49 @@ fire_breath:
       type: event
       keyframes:
         12: { name: breath_damage }
+
+# A small scene: a gem rises with its name, a title, and a camera that circles it.
+showcase:
+  duration: 100
+  parameters:
+    name: "<gradient:#7FD4FF:#C77DFF>Starlight Gem</gradient>"
+  parts:
+    gem:
+      type: item
+      item: amethyst_shard
+      glow-color: "#C77DFF"
+      keyframes:
+        0: { offset: [0, 1, 3], scale: 0 }
+        20: { offset: [0, 1.6, 3], scale: 1.2, easing: ease-out-back }
+        90: { rotation: [0, 720, 0] }
+        96: { scale: 0, easing: ease-in }
+
+    label:
+      type: text
+      text: "%name%"
+      billboard: center
+      shadow: true
+      background: "#00000000"
+      keyframes:
+        10: { offset: [0, 2.4, 3], scale: 0 }
+        24: { scale: 1.2, easing: ease-out }
+        92: { scale: 0, easing: ease-in }
+
+    banner:
+      type: title
+      keyframes:
+        20: { title: "%name%", subtitle: "<gray>found by %player%", fade: [10, 50, 15] }
+
+    shine:
+      type: sound
+      keyframes:
+        20: { sound: block.amethyst_block.resonate, pitch: 1.4 }
+
+    shot:
+      type: camera
+      skippable: true
+      look: gem
+      keyframes:
+        0: { offset: [-3, 2.5, 0] }
+        50: { offset: [0, 2.2, 6], easing: ease-in-out }
+        96: { offset: [3, 2.5, 0], easing: ease-in-out }

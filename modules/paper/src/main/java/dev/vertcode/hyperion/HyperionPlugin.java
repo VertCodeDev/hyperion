@@ -32,6 +32,7 @@ import dev.vertcode.hyperion.config.MessageBook;
 import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
+import dev.vertcode.hyperion.listener.EffectListener;
 import dev.vertcode.hyperion.listener.HitboxListener;
 import dev.vertcode.hyperion.listener.ModelListener;
 import dev.vertcode.hyperion.listener.PackListener;
@@ -117,6 +118,7 @@ public final class HyperionPlugin extends JavaPlugin {
         Menus menus = Menus.load(this, version);
         events.registerEvents(new ModelListener(models, modelRegistry, behaviors, effects, this, menus), this);
         events.registerEvents(new SeatListener(models), this);
+        events.registerEvents(new EffectListener(effects.cameras()), this);
         EventManager packets = PacketEvents.getAPI().getEventManager();
         this.packetListeners = List.of(
                 packets.registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL),

@@ -1,5 +1,6 @@
 package dev.vertcode.hyperion.effect;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,6 +55,7 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     private final EffectViewers viewers;
     private final Map<String, String> parameters;
     private final List<Runnable> endActions;
+    private final List<UUID> camera;
     private final @Nullable EffectActor[] actors;
     private final Map<String, @Nullable Placement> placements = new HashMap<>();
     private volatile boolean playing = true;
@@ -85,6 +87,7 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
         this.viewers = options.viewers();
         this.parameters = options.parameters();
         this.endActions = options.endActions();
+        this.camera = options.camera();
         this.actors = new EffectActor[compiled.effect().parts().size()];
         // Only a fixed spot is safe to read here; anything else is read on its own thread.
         this.location = anchor instanceof EffectAnchor.AtLocation(Location at) ? at.clone() : new Location(null, 0d, 0d, 0d);
@@ -354,6 +357,23 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
         Placement placement = this.placementOf(frame);
 
         return placement == null ? new Quaternionf() : new Quaternionf(placement.rotation());
+    }
+
+    @Override
+    public List<Player> cameraViewers() {
+        if (this.camera.isEmpty()) {
+            return List.of();
+        }
+
+        List<Player> online = new ArrayList<>(this.camera.size());
+        for (UUID id : this.camera) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null) {
+                online.add(player);
+            }
+        }
+
+        return online;
     }
 
     // Audience

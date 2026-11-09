@@ -91,6 +91,11 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
     public static final Key TIME = Key.key("hyperion", "time");
 
     /**
+     * A camera that moves the view of the players a play names along its keyframes.
+     */
+    public static final Key CAMERA = Key.key("hyperion", "camera");
+
+    /**
      * Sort the keyframes by tick and copy them.
      */
     public EffectPart {
@@ -227,6 +232,16 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
      */
     public static Builder time(final String name) {
         return of(name, TIME);
+    }
+
+    /**
+     * Start building a part of type {@code camera}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder camera(final String name) {
+        return of(name, CAMERA);
     }
 
     /**

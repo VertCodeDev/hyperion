@@ -42,7 +42,7 @@ not a new Hyperion release. Hyperion does not start without it.
 | `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
 | `bedrock` | Telling Bedrock players apart, the Bedrock pack, and the link the Geyser extension follows |
 | `effect` | `HyperionEffects` (loading, finding and playing effects), `EffectLoader` (YAML and model JSON into effects), `CompiledEffect` (an effect's steps, built once) and `EffectShow` (one play) |
-| `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts, events, text, item, block and model props, and screen steps |
+| `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts, events, text, item, block and model props, screen steps and the camera, with `CameraLock` for the players a camera holds |
 
 ## Models
 
@@ -79,7 +79,7 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy remove [radius]` | `hyperion.command.remove` | Remove the nearest model, or every model within the radius |
 | `/hy animate play <animation> [speed]` | `hyperion.command.animate` | Play an animation on the nearest model |
 | `/hy animate stop [animation]` | `hyperion.command.animate` | Stop one animation, or all of them, on the nearest model |
-| `/hy effect play <effect> [--here]` | `hyperion.command.effect` | Play an effect on the nearest model, or where you stand |
+| `/hy effect play <effect> [--here] [--camera]` | `hyperion.command.effect` | Play an effect on the nearest model, or where you stand; `--camera` lets its camera take your view |
 | `/hy effect stop` | `hyperion.command.effect` | Stop every effect within 16 blocks |
 | `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
@@ -205,6 +205,7 @@ add folders of their own in their own namespace, build effects in code, and add 
 | `title`, `actionbar`, `message` | MiniMessage text on each viewer's screen at each keyframe, with `%player%` |
 | `command` | A console command at each keyframe, once per viewer with `%player%`; never from a model's own effects |
 | `time` | Each viewer's own sky time, put back when the effect ends |
+| `camera` | Moves the view of the players a play names along its keyframes, looking at a spot, bone, locator or part |
 
 An effect follows what it is played on: a model, a bone, a Blockbench locator, an entity or a
 spot. A part sits at that anchor, a bone or locator of its model, or another part, with an offset
@@ -219,6 +220,13 @@ with its script. An animation in a player's view plays its effects to that playe
 **Inside a model.** A model may carry effects of its own in a `hyperion_effects` field of its
 `.bbmodel`, in the same form as the YAML, as `<model key>/<name>`. Blockbench keeps the field
 when it saves, and it is where a Blockbench plugin for building scenes will write.
+
+**Camera.** A camera only takes the view of players a play names (`EffectOptions#camera`, or
+`/hy effect play <effect> --camera` for yourself), never everyone who sees the effect. The player
+sees through a display only they know about while they stay where they stand, in their own
+gamemode, kept from walking and jumping by a modifier the server never saves. The view goes back
+when the camera hides, the effect ends, they sneak on a `skippable` camera, or they die, change
+worlds or leave. With `safe` (the default) they take no damage meanwhile.
 
 An effect on a model plays inside the model's frame, after the bones moved; one on an entity or
 a spot runs on that entity's or region's scheduler. Particles and sounds go to each viewer as

@@ -12,7 +12,7 @@ import dev.vertcode.hyperion.api.effect.EffectPartType;
 
 /**
  * The part types Hyperion ships: emitters, sounds, bursts and events; text, item, block and model
- * props; and titles, the action bar, chat, commands and the sky's time.
+ * props; titles, the action bar, chat, commands and the sky's time; and the camera.
  */
 public final class BuiltinParts {
 
@@ -39,7 +39,8 @@ public final class BuiltinParts {
                 type(EffectPart.ACTIONBAR, false, ScreenActors.ActionbarActor::new),
                 type(EffectPart.MESSAGE, false, ScreenActors.MessageActor::new),
                 type(EffectPart.COMMAND, false, context -> new ScreenActors.CommandActor(context, services)),
-                type(EffectPart.TIME, false, ScreenActors.TimeActor::new)
+                type(EffectPart.TIME, false, ScreenActors.TimeActor::new),
+                type(EffectPart.CAMERA, true, context -> new CameraActor(context, services.cameras()))
         );
     }
 

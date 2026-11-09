@@ -10,6 +10,7 @@ import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCamera;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDestroyEntities;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityTeleport;
@@ -124,6 +125,29 @@ public final class Packets {
         Vector3d position = new Vector3d(location.getX(), location.getY(), location.getZ());
 
         return new WrapperPlayServerEntityTeleport(entityId, position, 0f, 0f, false);
+    }
+
+    /**
+     * Build the packet that moves an entity and turns it to the location's yaw and pitch.
+     *
+     * @param entityId the entity's id
+     * @param location where it moves to, and which way it faces
+     * @return the packet
+     */
+    public static WrapperPlayServerEntityTeleport teleportFacing(final int entityId, final Location location) {
+        Vector3d position = new Vector3d(location.getX(), location.getY(), location.getZ());
+
+        return new WrapperPlayServerEntityTeleport(entityId, position, location.getYaw(), location.getPitch(), false);
+    }
+
+    /**
+     * Build the packet that makes a player see through another entity's eyes, or their own again.
+     *
+     * @param entityId the entity to see through, the player's own id to see normally
+     * @return the packet
+     */
+    public static WrapperPlayServerCamera camera(final int entityId) {
+        return new WrapperPlayServerCamera(entityId);
     }
 
     /**

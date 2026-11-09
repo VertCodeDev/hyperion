@@ -1,5 +1,6 @@
 package dev.vertcode.hyperion.api.effect;
 
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
@@ -24,6 +25,15 @@ public interface EffectOptions {
      * @return these options
      */
     EffectOptions parameter(String name, String value);
+
+    /**
+     * Let the effect's camera parts take these players' view. A camera never takes anyone's
+     * view unless a play names them.
+     *
+     * @param players the players
+     * @return these options
+     */
+    EffectOptions camera(Player... players);
 
     /**
      * Run something when the effect ends, on the thread it played on.

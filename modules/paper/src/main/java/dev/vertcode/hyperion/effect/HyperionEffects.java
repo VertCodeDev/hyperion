@@ -52,6 +52,7 @@ import dev.vertcode.hyperion.blueprint.LoadReport;
 import dev.vertcode.hyperion.blueprint.metadata.JsonMetadata;
 import dev.vertcode.hyperion.config.EffectSettings;
 import dev.vertcode.hyperion.effect.part.BuiltinParts;
+import dev.vertcode.hyperion.effect.part.CameraLock;
 import dev.vertcode.hyperion.effect.part.PartServices;
 import dev.vertcode.hyperion.effect.part.ParticleData;
 import dev.vertcode.hyperion.model.ModelEffects;
@@ -101,6 +102,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
     private final Map<Key, Embedded> embedded = new ConcurrentHashMap<>();
     private final Set<EffectShow> playing = ConcurrentHashMap.newKeySet();
     private final Set<String> warned = ConcurrentHashMap.newKeySet();
+    private final CameraLock cameras;
     private volatile EffectSettings settings;
 
     /**
@@ -121,9 +123,19 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         this.models = models;
         this.blueprints = blueprints;
         this.settings = settings;
-        for (EffectPartType type : BuiltinParts.all(new PartServices(plugin, blueprints, models))) {
+        this.cameras = new CameraLock(plugin);
+        for (EffectPartType type : BuiltinParts.all(new PartServices(plugin, blueprints, models, this.cameras))) {
             this.registerPartType(plugin, type);
         }
+    }
+
+    /**
+     * Return the players cameras hold.
+     *
+     * @return the lock
+     */
+    public CameraLock cameras() {
+        return this.cameras;
     }
 
     // Loading
@@ -495,6 +507,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         }
 
         this.playing.clear();
+        this.cameras.releaseAll();
     }
 
     // Model keyframes

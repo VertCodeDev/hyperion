@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
+import org.bukkit.entity.Player;
 
 import dev.vertcode.hyperion.api.effect.Effect;
 import dev.vertcode.hyperion.api.effect.EffectOptions;
@@ -17,6 +20,7 @@ final class EffectPlay implements EffectOptions {
 
     private final Map<String, String> parameters;
     private final List<Runnable> endActions = new ArrayList<>();
+    private final List<UUID> camera = new ArrayList<>();
     private EffectViewers viewers;
 
     /**
@@ -44,6 +48,15 @@ final class EffectPlay implements EffectOptions {
     }
 
     @Override
+    public EffectOptions camera(final Player... players) {
+        for (Player player : players) {
+            this.camera.add(player.getUniqueId());
+        }
+
+        return this;
+    }
+
+    @Override
     public EffectOptions onEnd(final Runnable action) {
         this.endActions.add(action);
 
@@ -60,5 +73,9 @@ final class EffectPlay implements EffectOptions {
 
     List<Runnable> endActions() {
         return List.copyOf(this.endActions);
+    }
+
+    List<UUID> camera() {
+        return List.copyOf(this.camera);
     }
 }
