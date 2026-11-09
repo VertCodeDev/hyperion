@@ -19,6 +19,7 @@ import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.item.ItemStack;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.PacketWrapper;
+import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -59,6 +60,10 @@ import dev.vertcode.hyperion.api.model.bone.ItemSource;
 import dev.vertcode.hyperion.api.model.locator.Locator;
 import dev.vertcode.hyperion.api.model.view.PlayerView;
 import dev.vertcode.hyperion.api.model.view.Viewers;
+import dev.vertcode.hyperion.bedrock.BedrockIds;
+import dev.vertcode.hyperion.bedrock.BedrockLink;
+import dev.vertcode.hyperion.bedrock.BedrockPackBuilder;
+import dev.vertcode.hyperion.bedrock.BedrockState;
 import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintBone;
 import dev.vertcode.hyperion.blueprint.BlueprintLocator;
@@ -154,6 +159,8 @@ final class HyperionModel implements Model {
     private boolean animatedBefore;
     private boolean moving;
     private boolean lookChangedThisFrame;
+    private final int standIn = SpigotReflectionUtil.generateEntityId();
+    private @Nullable BedrockState bedrockState;
     private int stillTicks = STILL_TICKS;
     private double lastX;
     private double lastZ;
@@ -257,6 +264,7 @@ final class HyperionModel implements Model {
         }
 
         this.render(here);
+        this.publishBedrock();
     }
 
     /**
@@ -367,7 +375,7 @@ final class HyperionModel implements Model {
     private void join(final Player player) {
         User user = this.manager.user(player);
         if (user != null) {
-            this.joined.add(this.viewers.add(player, user));
+            this.joined.add(this.viewers.add(player, user, this.manager.isBedrock(player.getUniqueId())));
         }
     }
 
@@ -390,9 +398,13 @@ final class HyperionModel implements Model {
             return;
         }
 
-        Packets.send(viewer.user(), Packets.destroy(this.displayIds));
-        if (restoreEntity && this.entity != null) {
-            this.restoreEntity(viewer, this.entity);
+        if (viewer.bedrock()) {
+            this.dropBedrock(List.of(viewer));
+        } else {
+            Packets.send(viewer.user(), Packets.destroy(this.displayIds));
+            if (restoreEntity && this.entity != null) {
+                this.restoreEntity(viewer, this.entity);
+            }
         }
 
         Bukkit.getPluginManager().callEvent(new ModelViewerEvent(this, viewer.player(), false));
@@ -453,6 +465,14 @@ final class HyperionModel implements Model {
         boolean restructured = !this.added.isEmpty() || !this.dropped.isEmpty();
         for (Viewer viewer : this.viewers.viewers()) {
             if (this.joined.contains(viewer) || this.respawn.contains(viewer)) {
+                continue;
+            }
+
+            if (viewer.bedrock()) {
+                if (this.teleported && this.entity == null) {
+                    Packets.send(viewer.user(), Packets.teleport(this.standIn, here));
+                }
+
                 continue;
             }
 
@@ -1044,6 +1064,11 @@ final class HyperionModel implements Model {
      * @param here where the model is
      */
     private void spawnFor(final Viewer viewer, final Location here) {
+        if (viewer.bedrock()) {
+            this.spawnBedrock(viewer, here);
+            return;
+        }
+
         HyperionPlayerView view = this.views.get(viewer.player().getUniqueId());
         if (view != null && view.active()) {
             view.rendered(false);
@@ -1078,6 +1103,120 @@ final class HyperionModel implements Model {
         for (PacketWrapper<?> packet : BaseEntityData.packets(carrier, parts)) {
             Packets.send(viewer.user(), packet);
         }
+    }
+
+    // Bedrock
+
+    /**
+     * Show the model to a Bedrock player. A model on an entity needs nothing sent: the entity's
+     * own spawn packet carries the model in its UUID. A model on its own gets a stand-in entity
+     * that only Bedrock players are sent, which Geyser turns into the model.
+     *
+     * @param viewer the Bedrock player
+     * @param here where the model is
+     */
+    private void spawnBedrock(final Viewer viewer, final Location here) {
+        // Without the extension Geyser would show the stand-in as a plain armor stand.
+        BedrockLink link = this.manager.link();
+        if (link == null || !link.connected()) {
+            return;
+        }
+
+        if (this.entity == null) {
+            UUID uuid = BedrockIds.uuid(BedrockIds.id(this.blueprint.key()), this.standIn);
+            Packets.send(viewer.user(), Packets.standIn(this.standIn, uuid, here));
+        }
+
+        link.publish(this.bedrockState().event(this.bedrockEntity(), List.of(viewer.player().getUniqueId())));
+    }
+
+    /**
+     * Stop showing the model to some Bedrock players: remove the stand-in, and tell the
+     * extension to forget them.
+     *
+     * @param viewers the Bedrock players
+     */
+    private void dropBedrock(final List<Viewer> viewers) {
+        if (viewers.isEmpty()) {
+            return;
+        }
+
+        List<UUID> players = new ArrayList<>(viewers.size());
+        for (Viewer viewer : viewers) {
+            players.add(viewer.player().getUniqueId());
+            if (this.entity == null) {
+                Packets.send(viewer.user(), Packets.destroy(new int[] {this.standIn}));
+            }
+        }
+
+        BedrockLink link = this.manager.link();
+        if (link != null) {
+            link.publish(BedrockState.gone(this.bedrockEntity(), players));
+        }
+    }
+
+    /**
+     * Tell the extension what the model's Bedrock viewers should see, when it changed.
+     */
+    private void publishBedrock() {
+        BedrockLink link = this.manager.link();
+        if (link == null) {
+            return;
+        }
+
+        List<UUID> players = new ArrayList<>();
+        for (Viewer viewer : this.viewers.viewers()) {
+            if (viewer.bedrock()) {
+                players.add(viewer.player().getUniqueId());
+            }
+        }
+
+        if (players.isEmpty()) {
+            return;
+        }
+
+        BedrockState state = this.bedrockState();
+        if (state.equals(this.bedrockState)) {
+            return;
+        }
+
+        this.bedrockState = state;
+        link.publish(state.event(this.bedrockEntity(), players));
+    }
+
+    /**
+     * Work out what Bedrock players should see: the animations that play, numbered as the
+     * Bedrock pack numbers them, the speed of the first, and the scale.
+     *
+     * @return the state
+     */
+    private BedrockState bedrockState() {
+        List<String> names = new ArrayList<>(this.blueprint.animations());
+        List<Integer> playing = new ArrayList<>();
+        float speed = 1f;
+        for (AnimationHandle handle : this.animator.playing()) {
+            int index = names.indexOf(handle.name());
+            if (index >= 0 && index < BedrockPackBuilder.MAX_ANIMATIONS) {
+                if (playing.isEmpty()) {
+                    speed = handle.speed();
+                }
+
+                playing.add(index);
+            }
+        }
+
+        playing.sort(Integer::compare);
+
+        return new BedrockState(playing, speed, this.scale);
+    }
+
+    /**
+     * Return the Java id of the entity Bedrock players see as the model.
+     *
+     * @return the carrying entity's id, or the stand-in's for a model on its own
+     */
+    private int bedrockEntity() {
+        return this.entity != null ? this.entity.getEntityId() : this.standIn;
     }
 
     /**
@@ -1485,13 +1624,21 @@ final class HyperionModel implements Model {
         this.cancelTask();
         boolean entityStays = reason == RemovalReason.ENTITY_REMOVED || reason == RemovalReason.ENTITY_UNLOADED;
         boolean carrierGoes = this.entity != null && !entityStays && this.manager.isCarrier(this.entity);
+        List<Viewer> bedrock = new ArrayList<>();
         for (Viewer viewer : this.viewers.snapshot()) {
-            Packets.send(viewer.user(), Packets.destroy(this.displayIds));
             this.viewers.remove(viewer.player().getUniqueId());
+            if (viewer.bedrock()) {
+                bedrock.add(viewer);
+                continue;
+            }
+
+            Packets.send(viewer.user(), Packets.destroy(this.displayIds));
             if (this.entity != null && !carrierGoes) {
                 this.restoreEntity(viewer, this.entity);
             }
         }
+
+        this.dropBedrock(bedrock);
 
         for (HyperionBone bone : this.bones) {
             for (BoneBehavior behavior : bone.behaviors()) {
@@ -1530,10 +1677,16 @@ final class HyperionModel implements Model {
 
         this.removed = true;
         this.cancelTask();
+        List<Viewer> bedrock = new ArrayList<>();
         for (Viewer viewer : this.viewers.snapshot()) {
-            Packets.send(viewer.user(), Packets.destroy(this.displayIds));
+            if (viewer.bedrock()) {
+                bedrock.add(viewer);
+            } else {
+                Packets.send(viewer.user(), Packets.destroy(this.displayIds));
+            }
         }
 
+        this.dropBedrock(bedrock);
         this.manager.forget(this);
     }
 

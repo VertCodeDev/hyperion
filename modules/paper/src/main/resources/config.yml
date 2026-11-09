@@ -57,3 +57,13 @@ pack:
   base-item: paper
   # The first custom model data number Hyperion uses on 1.21 to 1.21.3.
   custom-model-data-start: 10000
+
+# Bedrock players, through Geyser.
+bedrock:
+  # Show models to Bedrock players as native Bedrock entities. Needs Hyperion's Geyser extension,
+  # hyperion-geyser, in Geyser's extensions folder, wherever Geyser runs. Without it, Bedrock
+  # players see the plain mob a model rides.
+  enabled: true
+  # The port the Geyser extension connects to. Only the machine Geyser runs on needs to reach it.
+  # The extension also needs the token in plugins/Hyperion/bedrock-token.txt.
+  link-port: 8164

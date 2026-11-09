@@ -1,5 +1,6 @@
 package dev.vertcode.hyperion;
 
+import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.logging.Level;
 
@@ -13,6 +14,9 @@ import org.jspecify.annotations.Nullable;
 import dev.vertcode.hyperion.api.Hyperion;
 import dev.vertcode.hyperion.api.event.BlueprintLoadEvent;
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
+import dev.vertcode.hyperion.bedrock.BedrockLink;
+import dev.vertcode.hyperion.bedrock.BedrockPlayers;
+import dev.vertcode.hyperion.bedrock.BedrockToken;
 import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.HyperionFormatRegistry;
@@ -23,6 +27,7 @@ import dev.vertcode.hyperion.config.HyperionConfig;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessageBook;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
+import dev.vertcode.hyperion.listener.BedrockListener;
 import dev.vertcode.hyperion.listener.ModelListener;
 import dev.vertcode.hyperion.listener.PackListener;
 import dev.vertcode.hyperion.model.HyperionModelRegistry;
@@ -35,11 +40,13 @@ public final class HyperionPlugin extends JavaPlugin {
 
     private static final String LOADED = "Loaded %d model(s) in %d ms: %d failed, %d warning(s)";
     private static final String LOAD_FAILED = "Loading the models failed";
+    private static final String LINK_FAILED = "The Bedrock link could not start on port %d; is the port in use?";
 
     private @Nullable BlueprintRegistry registry;
     private @Nullable PackManager packs;
     private @Nullable ModelManager models;
     private @Nullable PacketListenerCommon packetListener;
+    private @Nullable BedrockLink bedrockLink;
 
     @Override
     public void onEnable() {
@@ -65,11 +72,18 @@ public final class HyperionPlugin extends JavaPlugin {
         PackFormat format = PackFormat.ofServer(version, this.getServer().getClass().getClassLoader());
         PackManager packs = new PackManager(this, registry, async, config.pack(), version, format);
         packs.configure(config.pack());
+        packs.bedrock(config.bedrock().enabled());
         this.packs = packs;
+
+        // Bedrock
+        BedrockPlayers bedrock = new BedrockPlayers();
+        BedrockLink link = config.bedrock().enabled() ? this.startLink(config.bedrock().linkPort(), packs, bedrock) : null;
+        this.bedrockLink = link;
 
         // Models
         HyperionBehaviorRegistry behaviors = new HyperionBehaviorRegistry();
         ModelManager models = new ModelManager(this, registry, behaviors, version, config.models(), config.pack());
+        models.bedrock(bedrock, link);
         registry.useSpawner(models);
         packs.onBuilt(models::refresh);
         this.models = models;
@@ -83,6 +97,7 @@ public final class HyperionPlugin extends JavaPlugin {
 
         // Listeners
         events.registerEvents(new PackListener(packs), this);
+        events.registerEvents(new BedrockListener(bedrock), this);
         Menus menus = Menus.load(this, version);
         events.registerEvents(new ModelListener(models, modelRegistry, behaviors, this, menus), this);
         this.packetListener = PacketEvents.getAPI()
@@ -102,6 +117,10 @@ public final class HyperionPlugin extends JavaPlugin {
 
         if (this.packetListener != null) {
             PacketEvents.getAPI().getEventManager().unregisterListener(this.packetListener);
+        }
+
+        if (this.bedrockLink != null) {
+            this.bedrockLink.stop();
         }
 
         // Api
@@ -130,6 +149,25 @@ public final class HyperionPlugin extends JavaPlugin {
 
         if (this.models != null) {
             this.models.configure(config.models(), config.pack());
+        }
+    }
+
+    /**
+     * Start the link the Geyser extension follows, with the token from
+     * {@code bedrock-token.txt}, made on first start.
+     *
+     * @param port the port to listen on
+     * @param packs where the Bedrock pack comes from
+     * @param players where the extension's player reports go
+     * @return the link, or null when it could not start, which is logged
+     */
+    private @Nullable BedrockLink startLink(final int port, final PackManager packs, final BedrockPlayers players) {
+        try {
+            String token = BedrockToken.load(this.getDataPath().resolve(BedrockToken.FILE));
+            return BedrockLink.start(port, token, packs::bedrockPack, players);
+        } catch (IOException exception) {
+            this.getLogger().log(Level.SEVERE, String.format(LINK_FAILED, port), exception);
+            return null;
         }
     }
 

@@ -5,6 +5,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +37,9 @@ import dev.vertcode.hyperion.api.model.RemovalReason;
 import dev.vertcode.hyperion.api.model.SpawnOptions;
 import dev.vertcode.hyperion.api.version.Feature;
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
+import dev.vertcode.hyperion.bedrock.BedrockIds;
+import dev.vertcode.hyperion.bedrock.BedrockLink;
+import dev.vertcode.hyperion.bedrock.BedrockPlayers;
 import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
 import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
@@ -71,6 +75,8 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
     private volatile PartItems items;
     private volatile String baseItem;
     private volatile @Nullable ResourcePack pack;
+    private BedrockPlayers bedrockPlayers = new BedrockPlayers();
+    private volatile @Nullable BedrockLink link;
 
     /**
      * Create the manager.
@@ -98,6 +104,36 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
         this.settings = settings;
         this.items = new PartItems(pack.baseItem(), this.itemModels);
         this.baseItem = pack.baseItem();
+    }
+
+    /**
+     * Show models to Bedrock players through the Geyser extension. Call once, on enable.
+     *
+     * @param players who is on Bedrock
+     * @param link the link the extension follows, or null with Bedrock off
+     */
+    public void bedrock(final BedrockPlayers players, final @Nullable BedrockLink link) {
+        this.bedrockPlayers = players;
+        this.link = link;
+    }
+
+    /**
+     * Return whether a player is on Bedrock. Cheap, for every packet.
+     *
+     * @param player the player's id
+     * @return true for a Bedrock player
+     */
+    public boolean isBedrock(final UUID player) {
+        return this.bedrockPlayers.isBedrock(player);
+    }
+
+    /**
+     * Return the link the Geyser extension follows.
+     *
+     * @return the link, or null with Bedrock off
+     */
+    @Nullable BedrockLink link() {
+        return this.link;
     }
 
     /**
@@ -328,6 +364,22 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
      */
     public boolean anyOnEntities() {
         return !this.byEntity.isEmpty();
+    }
+
+    /**
+     * Return the model a Bedrock player sees an entity as: the first model it carries.
+     *
+     * @param entityId the entity's id
+     * @return the model's Bedrock id, or empty when the entity carries no model
+     */
+    public OptionalInt bedrockModel(final int entityId) {
+        for (HyperionModel model : this.on(entityId)) {
+            if (!model.isRemoved()) {
+                return OptionalInt.of(BedrockIds.id(model.currentBlueprint().key()));
+            }
+        }
+
+        return OptionalInt.empty();
     }
 
     /**

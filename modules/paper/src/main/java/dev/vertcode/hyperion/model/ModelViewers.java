@@ -159,10 +159,11 @@ final class ModelViewers implements Viewers {
      *
      * @param player the player
      * @param user the player's connection
+     * @param bedrock whether the player is on Bedrock
      * @return the viewer
      */
-    Viewer add(final Player player, final User user) {
-        Viewer viewer = new Viewer(player, user);
+    Viewer add(final Player player, final User user, final boolean bedrock) {
+        Viewer viewer = new Viewer(player, user, bedrock);
         this.current.put(player.getUniqueId(), viewer);
 
         return viewer;

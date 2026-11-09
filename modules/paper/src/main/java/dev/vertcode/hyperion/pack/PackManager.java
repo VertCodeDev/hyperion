@@ -26,6 +26,9 @@ import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
+import dev.vertcode.hyperion.bedrock.BedrockPack;
+import dev.vertcode.hyperion.bedrock.BedrockPackBuilder;
+import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.PackHosting;
@@ -67,6 +70,8 @@ public final class PackManager {
     private final Map<UUID, PlayerResourcePackStatusEvent.Status> statuses = new ConcurrentHashMap<>();
     private volatile PackSettings settings;
     private volatile @Nullable ResourcePack pack;
+    private volatile @Nullable BedrockPack bedrock;
+    private volatile boolean bedrockEnabled;
     private volatile Consumer<ResourcePack> builtListener = built -> {
     };
     private @Nullable PackServer server;
@@ -440,7 +445,30 @@ public final class PackManager {
      * @return the pack
      */
     private ResourcePack build() {
-        return PackBuilder.build(this.registry.all(), this.settings, this.version, this.format);
+        List<Blueprint> blueprints = this.registry.all();
+        if (this.bedrockEnabled) {
+            this.bedrock = BedrockPackBuilder.build(blueprints);
+        }
+
+        return PackBuilder.build(blueprints, this.settings, this.version, this.format);
+    }
+
+    /**
+     * Build the Bedrock pack too from the next build on, for the Geyser extension.
+     *
+     * @param enabled true to build it
+     */
+    public void bedrock(final boolean enabled) {
+        this.bedrockEnabled = enabled;
+    }
+
+    /**
+     * Return the Bedrock pack built with the current pack.
+     *
+     * @return the Bedrock pack, or null before the first build or with Bedrock off
+     */
+    public @Nullable BedrockPack bedrockPack() {
+        return this.bedrock;
     }
 
     /**

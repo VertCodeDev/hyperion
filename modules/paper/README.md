@@ -40,6 +40,7 @@ not a new Hyperion release. Hyperion does not start without it.
 | `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
 | `animation.molang` | The part of Molang Blockbench keyframes use |
 | `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
+| `bedrock` | Telling Bedrock players apart, the Bedrock pack, and the link the Geyser extension follows |
 
 ## Models
 
@@ -144,6 +145,22 @@ every model, or per entity type (`armor_stand: false`); a plugin can turn it off
 
 A player's view of a model (`Model#view`) has its own animator and look overrides: what it plays
 and sets only that player sees, on top of what everyone sees.
+
+## Bedrock
+
+Bedrock players see models as native Bedrock entities through the
+[Geyser extension](../geyser/README.md), wherever Geyser runs. Hyperion builds a Bedrock pack next
+to the Java one, from the same models, and serves it with the model list on its Bedrock link
+(`bedrock.link-port`, default 8164), guarded by the token in `plugins/Hyperion/bedrock-token.txt`.
+
+Bedrock players get no display packets. The entity carrying a model is sent to them with the model
+in its UUID, and Geyser shows the model in its place; a model on its own gets a stand-in entity
+only they are sent. Which animations play goes to the extension as a stream of events, so they run
+on the player's device.
+
+A player counts as Bedrock when the extension reports them, when Floodgate says so, or when their
+UUID starts with 64 zero bits, as Floodgate's do. Without the extension, Bedrock players see the
+plain mob a model rides.
 
 ## Resource pack
 

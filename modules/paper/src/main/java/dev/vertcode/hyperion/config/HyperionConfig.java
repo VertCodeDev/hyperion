@@ -18,8 +18,9 @@ import org.bukkit.plugin.Plugin;
  *
  * @param pack the resource pack settings
  * @param models the settings live models start with
+ * @param bedrock the Bedrock settings
  */
-public record HyperionConfig(PackSettings pack, ModelSettings models) {
+public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSettings bedrock) {
 
     /**
      * The file name, in the data folder and in the jar.
@@ -28,6 +29,7 @@ public record HyperionConfig(PackSettings pack, ModelSettings models) {
 
     private static final String BAD_VALUE = "config.yml: '%s' is not a valid %s, using %s";
     private static final int DEFAULT_PORT = 8163;
+    private static final int DEFAULT_LINK_PORT = 8164;
     private static final int MAX_PORT = 65_535;
     private static final int DEFAULT_CUSTOM_MODEL_DATA = 10_000;
     private static final String DEFAULT_BASE_ITEM = "paper";
@@ -102,7 +104,15 @@ public record HyperionConfig(PackSettings pack, ModelSettings models) {
 
         ModelSettings models = new ModelSettings(viewDistance, interpolation, autoAnimations(config), spawnEntity);
 
-        return new HyperionConfig(pack, models);
+        int linkPort = config.getInt("bedrock.link-port", DEFAULT_LINK_PORT);
+        if (linkPort < 1 || linkPort > MAX_PORT) {
+            logger.warning(String.format(BAD_VALUE, linkPort, "bedrock.link-port", DEFAULT_LINK_PORT));
+            linkPort = DEFAULT_LINK_PORT;
+        }
+
+        BedrockSettings bedrock = new BedrockSettings(config.getBoolean("bedrock.enabled", true), linkPort);
+
+        return new HyperionConfig(pack, models, bedrock);
     }
 
     /**

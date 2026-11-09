@@ -2,6 +2,7 @@ package dev.vertcode.hyperion.listener;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,8 +17,10 @@ import com.github.retrooper.packetevents.protocol.player.Equipment;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityEquipment;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetPassengers;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
 
 import dev.vertcode.hyperion.api.model.EntityPart;
+import dev.vertcode.hyperion.bedrock.BedrockIds;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.render.DisplayData;
 import dev.vertcode.hyperion.render.HiddenParts;
@@ -48,13 +51,28 @@ public final class BaseEntityListener implements PacketListener {
         PacketTypeCommon type = event.getPacketType();
         boolean watched = type == PacketType.Play.Server.ENTITY_METADATA
                 || type == PacketType.Play.Server.ENTITY_EQUIPMENT
-                || type == PacketType.Play.Server.SET_PASSENGERS;
+                || type == PacketType.Play.Server.SET_PASSENGERS
+                || type == PacketType.Play.Server.SPAWN_ENTITY;
         if (!watched || !this.models.anyOnEntities()) {
             return;
         }
 
         UUID viewer = event.getUser().getUUID();
         if (viewer == null) {
+            return;
+        }
+
+        // A Bedrock player sees the entity itself turned into the model by Geyser: nothing of it
+        // is hidden and no display rides it, but its spawn names the model in its UUID.
+        if (this.models.isBedrock(viewer)) {
+            if (type == PacketType.Play.Server.SPAWN_ENTITY) {
+                this.nameModel(event);
+            }
+
+            return;
+        }
+
+        if (type == PacketType.Play.Server.SPAWN_ENTITY) {
             return;
         }
 
@@ -65,6 +83,22 @@ public final class BaseEntityListener implements PacketListener {
         } else {
             this.passengers(event, viewer);
         }
+    }
+
+    /**
+     * Put the model an entity carries into the UUID of its spawn packet, for Geyser to read.
+     *
+     * @param event the packet
+     */
+    private void nameModel(final PacketSendEvent event) {
+        WrapperPlayServerSpawnEntity packet = new WrapperPlayServerSpawnEntity(event);
+        OptionalInt model = this.models.bedrockModel(packet.getEntityId());
+        if (model.isEmpty()) {
+            return;
+        }
+
+        packet.setUUID(Optional.of(BedrockIds.uuid(model.getAsInt(), packet.getEntityId())));
+        event.markForReEncode(true);
     }
 
     /**

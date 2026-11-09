@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
 import dev.vertcode.hyperion.config.PackHosting;
 import dev.vertcode.hyperion.config.PackSettings;
+import dev.vertcode.hyperion.bedrock.BedrockPack;
+import dev.vertcode.hyperion.bedrock.BedrockPackBuilder;
 import dev.vertcode.hyperion.pack.PackBuilder;
 import dev.vertcode.hyperion.pack.PackFormat;
 import dev.vertcode.hyperion.pack.ResourcePack;
@@ -53,5 +55,10 @@ class RealModelsTest {
             ResourcePack pack = PackBuilder.build(result.loaded(), settings, version, PackFormat.known(version));
             System.out.printf("pack for %s: %s, %d files in %d ms%n", name, pack.describeSize(), pack.files(), pack.millis());
         }
+
+        long start = System.nanoTime();
+        BedrockPack bedrock = BedrockPackBuilder.build(result.loaded());
+        long millis = (System.nanoTime() - start) / 1_000_000L;
+        System.out.printf("bedrock pack: %.1f KiB in %d ms%n", bedrock.zip().length / 1024d, millis);
     }
 }

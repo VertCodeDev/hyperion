@@ -60,6 +60,29 @@ public final class Packets {
     }
 
     /**
+     * Build the packet that spawns the stand-in Bedrock players see as a model on its own.
+     * Geyser turns it into the model; Java players are never sent it.
+     *
+     * @param entityId the stand-in's entity id
+     * @param uniqueId the UUID that names the model to Geyser
+     * @param location where it stands
+     * @return the packet
+     */
+    public static WrapperPlayServerSpawnEntity standIn(final int entityId, final UUID uniqueId, final Location location) {
+        return new WrapperPlayServerSpawnEntity(
+                entityId,
+                Optional.of(uniqueId),
+                EntityTypes.ARMOR_STAND,
+                new Vector3d(location.getX(), location.getY(), location.getZ()),
+                location.getPitch(),
+                location.getYaw(),
+                location.getYaw(),
+                0,
+                Optional.empty()
+        );
+    }
+
+    /**
      * Build the packet that changes some of an entity's data.
      *
      * @param entityId the entity id

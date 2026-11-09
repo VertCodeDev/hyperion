@@ -1,11 +1,8 @@
 package dev.vertcode.hyperion.pack;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,7 +75,7 @@ public final class PackBuilder {
         byte[] zip = writer.zip();
         long millis = (System.nanoTime() - start) / 1_000_000L;
 
-        return new ResourcePack(zip, sha1(zip), writer.size(), millis, parts);
+        return new ResourcePack(zip, PackWriter.sha1(zip), writer.size(), millis, parts);
     }
 
     /**
@@ -138,17 +135,4 @@ public final class PackBuilder {
         return model;
     }
 
-    /**
-     * Hash the zip the way clients check it.
-     *
-     * @param zip the zip's bytes
-     * @return the SHA-1 in lowercase hex
-     */
-    private static String sha1(final byte[] zip) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(zip));
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("Every Java runtime has SHA-1", exception);
-        }
-    }
 }

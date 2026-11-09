@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
  *
  * @param player the player
  * @param user the player's PacketEvents connection
+ * @param bedrock whether the player is on Bedrock, and sees the model through Geyser instead
  */
-record Viewer(Player player, User user) {
+record Viewer(Player player, User user, boolean bedrock) {
 }
