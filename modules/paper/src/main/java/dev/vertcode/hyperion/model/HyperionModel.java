@@ -346,10 +346,12 @@ final class HyperionModel implements Model {
 
     /**
      * Give the model one box around all of it when its hitbox mode asks for one, or when it has
-     * no hitbox bones, and take the box away when neither holds anymore.
+     * no hitbox bones, and take the box away when neither holds anymore. A model with no hitbox
+     * never gets one.
      */
     private void syncBox() {
-        boolean wanted = this.hitboxMode == HitboxMode.MODEL || this.behaviors(HitboxBehavior.class).isEmpty();
+        boolean wanted = this.hitboxMode != HitboxMode.NONE
+            && (this.hitboxMode == HitboxMode.MODEL || this.behaviors(HitboxBehavior.class).isEmpty());
         ModelBox current = this.box;
         if (wanted && current == null) {
             boolean forwards = this.manager.settings().behaviors().forwardDamage();

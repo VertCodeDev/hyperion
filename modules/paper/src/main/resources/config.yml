@@ -54,6 +54,7 @@ behaviors:
     #   bones  A hitbox per hitbox bone, following the bone. A model without hitbox bones gets
     #          one box around all of it.
     #   model  One box around the whole model.
+    #   none   No hitbox: players click straight through the model.
     mode: bones
     # Hits on a model on an entity hurt the entity, as if the player hit it.
     forward-damage: true
