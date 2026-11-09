@@ -73,6 +73,14 @@ behaviors:
       # A choice per entity type that wins over "enabled", such as horse: true.
       entities: {}
 
+# Particles and sounds on a timeline, from plugins/Hyperion/effects, plugins and models.
+effects:
+  # How far away, in blocks, players see an effect that is not on a model. Effects on a model
+  # go to the players who see the model.
+  view-distance: 32
+  # Scales every particle count: 0.5 halves them on a busy server, 0 sends none.
+  particle-multiplier: 1.0
+
 # The resource pack that holds every model.
 pack:
   # How players get the pack:

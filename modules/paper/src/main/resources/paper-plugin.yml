@@ -36,6 +36,7 @@ permissions:
       hyperion.command.spawn: true
       hyperion.command.remove: true
       hyperion.command.animate: true
+      hyperion.command.effect: true
       hyperion.menu: true
   hyperion.command.help:
     description: See the Hyperion help menu.
@@ -72,6 +73,9 @@ permissions:
     default: op
   hyperion.command.animate:
     description: Play and stop animations on the nearest model.
+    default: op
+  hyperion.command.effect:
+    description: Play, stop and list effects.
     default: op
   hyperion.menu:
     description: Open a model's menu by sneaking and right-clicking it.

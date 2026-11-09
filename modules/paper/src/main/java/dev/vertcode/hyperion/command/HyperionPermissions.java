@@ -71,6 +71,11 @@ public final class HyperionPermissions {
     public static final String ANIMATE = "hyperion.command.animate";
 
     /**
+     * Play, stop and list effects, through {@code /hyperion effect}.
+     */
+    public static final String EFFECT = "hyperion.command.effect";
+
+    /**
      * Open a model's menu by sneaking and right-clicking it.
      */
     public static final String MENU = "hyperion.menu";

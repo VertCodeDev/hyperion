@@ -1,0 +1,116 @@
+# Effects: particles and sounds on a timeline. Every top-level section is one effect, played as
+# hyperion:<section>. Try one with /hy effect play hyperion:level_up while you look at a model.
+#
+# An effect lasts "duration" ticks (20 a second) and has parts. Each part has a type:
+#   particle  An emitter: sends its shape of particles every "every" ticks while visible.
+#   sound     Plays a sound at each keyframe.
+#   burst     Sends a burst of particles at each keyframe.
+#   event     Fires an event plugins listen to at each keyframe, with the keyframe's "name".
+#
+# Keyframes sit at ticks. Numbers and [x, y, z] values move smoothly from one keyframe to the
+# next, eased by the later one's "easing": linear, ease-in, ease-out, ease-in-out, ease-in-back,
+# ease-out-back or ease-out-bounce. A particle part waits for its first keyframe.
+#
+# Where a part is:
+#   at: anchor          where the effect is played (the default)
+#   at: bone:<name>     a bone of the model, turning with it
+#   at: locator:<name>  a Blockbench locator of the model, turning with it
+#   at: <part>          another part, such as an emitter that moves
+#   offset: [right, up, forward]  blocks from there
+#
+# Who sees it: viewers: model (who sees the model, the default), everyone, or nearby:<radius>.
+# Parameters, written %name%, can be filled in by whoever plays the effect.
+
+level_up:
+  duration: 40
+  parts:
+    spiral:
+      type: particle
+      particle: END_ROD
+      shape: helix
+      count: 12
+      radius: 0.8
+      height: 2.2
+      every: 2
+      keyframes:
+        0: { radius: 0.2 }
+        20: { radius: 1.0, easing: ease-out }
+        36: { radius: 0.3, easing: ease-in }
+        38: { visible: false }
+
+    chime:
+      type: sound
+      keyframes:
+        0: { sound: block.amethyst_block.chime, pitch: 1.2 }
+        20: { sound: entity.player.levelup, volume: 0.8, pitch: 1.4 }
+
+    pop:
+      type: burst
+      offset: [0, 2.2, 0]
+      keyframes:
+        36: { particle: TOTEM_OF_UNDYING, count: 30, spread: 0.4, speed: 0.3 }
+
+smoke_puff:
+  duration: 10
+  parts:
+    puff:
+      type: burst
+      offset: [0, 0.5, 0]
+      keyframes:
+        0: { particle: CAMPFIRE_COSY_SMOKE, count: 8, spread: 0.3, speed: 0.02 }
+        4: { particle: POOF, count: 12, spread: 0.4, speed: 0.05 }
+
+    hiss:
+      type: sound
+      keyframes:
+        0: { sound: block.fire.extinguish, volume: 0.6, pitch: 1.3 }
+
+aura:
+  duration: 40
+  loop: true
+  parameters:
+    color: "#7FD4FF"
+  parts:
+    ring:
+      type: particle
+      particle: DUST
+      color: "%color%"
+      size: 1.2
+      shape: ring
+      count: 16
+      spin: 0.1
+      every: 2
+      keyframes:
+        0: { offset: [0, 0.1, 0], radius: 0.9 }
+        20: { offset: [0, 0.6, 0], radius: 1.1, easing: ease-in-out }
+        40: { offset: [0, 0.1, 0], radius: 0.9, easing: ease-in-out }
+
+# A breath from a model's mouth. Give your model a locator named "mouth", or change the "at".
+fire_breath:
+  duration: 40
+  viewers: nearby:32
+  parts:
+    flames:
+      type: particle
+      at: locator:mouth
+      particle: FLAME
+      count: 4
+      every: 1
+      direction: [0, -0.1, 1]
+      speed: 0.35
+      keyframes:
+        0: { visible: false }
+        8: { visible: true }
+        34: { visible: false }
+
+    roar:
+      type: sound
+      at: locator:mouth
+      keyframes:
+        0: { sound: entity.ender_dragon.growl, volume: 1.2, pitch: 0.8 }
+        8: { sound: item.firecharge.use, category: hostile }
+
+    hit:
+      type: event
+      keyframes:
+        12: { name: breath_damage }

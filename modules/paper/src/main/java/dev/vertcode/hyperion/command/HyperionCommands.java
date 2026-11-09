@@ -21,6 +21,7 @@ import org.incendo.cloud.paper.util.sender.Source;
 import dev.vertcode.hyperion.HyperionPlugin;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
+import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.config.MessagePalette;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackManager;
@@ -57,12 +58,14 @@ public final class HyperionCommands {
      * @param registry the loaded blueprints the commands show and reload
      * @param packs the resource pack the pack commands build and send
      * @param models the live models the spawn and remove commands work on
+     * @param effects the effects the effect commands play
      */
     public static void register(
             final HyperionPlugin plugin,
             final BlueprintRegistry registry,
             final PackManager packs,
-            final ModelManager models
+            final ModelManager models,
+            final HyperionEffects effects
     ) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
@@ -92,14 +95,15 @@ public final class HyperionCommands {
                 new ListCommand(registry),
                 new InfoCommand(registry),
                 new ReloadCommand(plugin, registry, packs),
-                new ValidateCommand(registry),
+                new ValidateCommand(registry, effects),
                 new PackBuildCommand(plugin, packs),
                 new PackSendCommand(packs),
                 new PackStatusCommand(packs),
                 new PackExportCommand(plugin, packs),
                 new SpawnCommand(plugin, registry, packs, models),
                 new RemoveCommand(models),
-                new AnimateCommand(models)
+                new AnimateCommand(models),
+                new EffectCommand(effects, models)
         );
     }
 

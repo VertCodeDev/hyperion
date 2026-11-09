@@ -1,5 +1,6 @@
 package dev.vertcode.hyperion.animation;
 
+import java.util.List;
 import java.util.Map;
 
 import dev.vertcode.hyperion.api.animation.LoopMode;
@@ -16,6 +17,7 @@ import dev.vertcode.hyperion.api.animation.LoopMode;
  * @param startDelay ticks to wait before the first run
  * @param loopDelay ticks to wait between runs of a looping animation
  * @param tracks the tracks by bone name
+ * @param effects the effect keyframes, by tick
  */
 public record BakedAnimation(
         String name,
@@ -24,14 +26,16 @@ public record BakedAnimation(
         boolean override,
         int startDelay,
         int loopDelay,
-        Map<String, BoneTrack> tracks
+        Map<String, BoneTrack> tracks,
+        List<TimedEffect> effects
 ) {
 
     /**
-     * Copy the tracks, so a baked animation never changes.
+     * Copy the tracks and effects, so a baked animation never changes.
      */
     public BakedAnimation {
         tracks = Map.copyOf(tracks);
+        effects = List.copyOf(effects);
     }
 
     /**

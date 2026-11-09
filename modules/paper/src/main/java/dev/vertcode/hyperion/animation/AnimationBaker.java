@@ -1,6 +1,7 @@
 package dev.vertcode.hyperion.animation;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -83,8 +84,14 @@ public final class AnimationBaker {
     private BakedAnimation bake(final Animation animation, final Map<String, String> bones) {
         int length = Math.max(0, Math.round(animation.length() * TICKS_PER_SECOND));
         Map<String, BoneTrack> tracks = new LinkedHashMap<>();
+        List<TimedEffect> effects = new ArrayList<>();
         for (Animator animator : animation.animators()) {
-            if (animator.type() != AnimatorType.BONE || animator.keyframes().isEmpty()) {
+            if (animator.type() == AnimatorType.EFFECT) {
+                effects(animator, effects);
+                continue;
+            }
+
+            if (animator.keyframes().isEmpty()) {
                 continue;
             }
 
@@ -104,8 +111,61 @@ public final class AnimationBaker {
                 animation.override(),
                 this.delay(animation.startDelay()),
                 this.delay(animation.loopDelay()),
-                tracks
+                tracks,
+                effects
         );
+    }
+
+    /**
+     * Read the effects timeline: a sound, a particle or a script per point of each keyframe.
+     * Points without an effect or script are left out.
+     *
+     * @param animator the effects animator
+     * @param into where the effect keyframes go, sorted by tick at the end
+     */
+    static void effects(final Animator animator, final List<TimedEffect> into) {
+        for (Keyframe keyframe : animator.keyframes()) {
+            int tick = Math.max(0, Math.round(keyframe.time() * TICKS_PER_SECOND));
+            for (KeyframePoint point : keyframe.points()) {
+                TimedEffect effect = switch (keyframe.channel()) {
+                    case SOUND -> timed(tick, TimedEffect.Kind.SOUND, point.value("effect", ""), null);
+                    case PARTICLE -> timed(tick, TimedEffect.Kind.PARTICLE, point.value("effect", ""), point.value("locator", ""));
+                    case TIMELINE -> timed(tick, TimedEffect.Kind.EVENT, point.value("script", ""), null);
+                    default -> null;
+                };
+
+                if (effect != null) {
+                    into.add(effect);
+                }
+            }
+        }
+
+        into.sort(Comparator.comparingInt(TimedEffect::tick));
+    }
+
+    /**
+     * Make an effect keyframe, or nothing when its text is blank.
+     *
+     * @param tick the tick
+     * @param kind what it is
+     * @param effect its text
+     * @param locator its locator, blank or null for none
+     * @return the keyframe, or null
+     */
+    private static @Nullable TimedEffect timed(
+            final int tick,
+            final TimedEffect.Kind kind,
+            final String effect,
+            final @Nullable String locator
+    ) {
+        String text = effect.trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+
+        String at = locator == null || locator.isBlank() ? null : locator.trim();
+
+        return new TimedEffect(tick, kind, text, at);
     }
 
     /**

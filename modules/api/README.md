@@ -27,6 +27,7 @@ boss.animator().play("roar");
 | `api.model.locator` | Locators: named points where effects attach |
 | `api.model.behavior` | Bone behaviors and how to register your own |
 | `api.model.behavior.builtin` | The head, seat, name tag, hand and ghost behaviors Hyperion ships, and the keys and controllers seats steer with |
+| `api.effect` | Effects: particles and sounds on a timeline, their anchors, viewers and your own part types |
 | `api.model.hitbox` | Bones players can hit and click, and the hitbox mode of a model |
 | `api.model.view` | Who sees a model, and per-player overrides |
 | `api.model.source` | Where models come from and the formats that read them |

@@ -3,6 +3,7 @@ package dev.vertcode.hyperion.api;
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.api.effect.EffectRegistry;
 import dev.vertcode.hyperion.api.model.ModelRegistry;
 import dev.vertcode.hyperion.api.model.ModelTracker;
 import dev.vertcode.hyperion.api.model.behavior.BehaviorRegistry;
@@ -80,6 +81,16 @@ public final class Hyperion {
      */
     public static FormatRegistry formats() {
         return api().formats();
+    }
+
+    /**
+     * Return the effects and the way to play them.
+     *
+     * @return the effect registry
+     * @throws IllegalStateException if Hyperion is not enabled
+     */
+    public static EffectRegistry effects() {
+        return api().effects();
     }
 
     /**

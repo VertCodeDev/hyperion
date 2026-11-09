@@ -27,8 +27,9 @@ import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
  * @param pack the resource pack settings
  * @param models the settings live models start with
  * @param bedrock the Bedrock settings
+ * @param effects the effect settings
  */
-public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSettings bedrock) {
+public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSettings bedrock, EffectSettings effects) {
 
     /**
      * The file name, in the data folder and in the jar.
@@ -54,6 +55,7 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
     private static final float MAX_YAW = 180f;
     private static final float MAX_PITCH = 90f;
     private static final Map<String, Key> BEHAVIOR_NAMES = behaviorNames();
+    private static final int DEFAULT_EFFECT_DISTANCE = 32;
 
     /**
      * Read {@code config.yml} from the data folder, writing or completing it from the jar first.
@@ -135,7 +137,16 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
 
         BedrockSettings bedrock = new BedrockSettings(config.getBoolean("bedrock.enabled", true), linkPort);
 
-        return new HyperionConfig(pack, models, bedrock);
+        int effectDistance = config.getInt("effects.view-distance", DEFAULT_EFFECT_DISTANCE);
+        if (effectDistance < 1) {
+            logger.warning(String.format(BAD_VALUE, effectDistance, "effects.view-distance", DEFAULT_EFFECT_DISTANCE));
+            effectDistance = DEFAULT_EFFECT_DISTANCE;
+        }
+
+        float multiplier = (float) Math.max(0d, config.getDouble("effects.particle-multiplier", 1d));
+        EffectSettings effects = new EffectSettings(effectDistance, multiplier);
+
+        return new HyperionConfig(pack, models, bedrock, effects);
     }
 
     /**

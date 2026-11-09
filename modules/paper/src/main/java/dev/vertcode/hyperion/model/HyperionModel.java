@@ -110,6 +110,7 @@ final class HyperionModel implements Model {
     private static final int AUTO_FADE = 4;
     private static final String BEHAVIOR_FAILED = "The behavior %s on bone %s of %s failed";
     private static final String CREATE_FAILED = "The behavior type %s could not be created for bone %s of %s";
+    private static final String TASK_FAILED = "An effect on %s failed and was stopped";
 
     private final ModelManager manager;
     private final UUID uniqueId = UUID.randomUUID();
@@ -166,6 +167,7 @@ final class HyperionModel implements Model {
     private final int standIn = SpigotReflectionUtil.generateEntityId();
     private @Nullable BedrockState bedrockState;
     private final HitboxMode hitboxMode;
+    private final List<ModelTask> tasks = new ArrayList<>();
     private @Nullable ModelBox box;
     private int stillTicks = STILL_TICKS;
     private double lastX;
@@ -268,12 +270,52 @@ final class HyperionModel implements Model {
 
         this.updateViewers(here);
         if (this.viewers.isEmpty()) {
+            this.runTasks();
             return;
         }
 
         this.render(here);
         this.publishBedrock();
         this.afterFrame();
+        this.runTasks();
+    }
+
+    /**
+     * Run the tasks attached to the model, such as effects on it, dropping those that are done.
+     */
+    private void runTasks() {
+        if (this.tasks.isEmpty()) {
+            return;
+        }
+
+        for (ModelTask task : List.copyOf(this.tasks)) {
+            boolean going;
+            try {
+                going = task.step();
+            } catch (RuntimeException exception) {
+                this.manager.plugin().getLogger().log(Level.WARNING, String.format(TASK_FAILED, this), exception);
+                going = false;
+            }
+
+            if (!going) {
+                this.tasks.remove(task);
+            }
+        }
+    }
+
+    /**
+     * Run a task inside every frame from the next one on, until it is done. Call on the owning
+     * thread.
+     *
+     * @param task the task
+     */
+    void attach(final ModelTask task) {
+        if (this.removed) {
+            task.cancel();
+            return;
+        }
+
+        this.tasks.add(task);
     }
 
     /**
@@ -1721,6 +1763,11 @@ final class HyperionModel implements Model {
             }
         }
 
+        for (ModelTask task : List.copyOf(this.tasks)) {
+            task.cancel();
+        }
+
+        this.tasks.clear();
         this.animator.clear();
         this.views.clear();
         this.manager.forget(this);
@@ -1763,6 +1810,7 @@ final class HyperionModel implements Model {
 
         this.dropBedrock(bedrock);
         this.removeBox();
+        this.tasks.clear();
         this.manager.forget(this);
     }
 
@@ -1888,7 +1936,10 @@ final class HyperionModel implements Model {
      * @return the animator
      */
     ModelAnimator newAnimator(final @Nullable Player viewer) {
-        return new ModelAnimator(this, name -> this.blueprint.baked(name), viewer, this.manager.plugin().getLogger());
+        ModelAnimator made = new ModelAnimator(this, name -> this.blueprint.baked(name), viewer, this.manager.plugin().getLogger());
+        made.effects((animation, effect, player) -> this.manager.effects().passed(this, animation, effect, player));
+
+        return made;
     }
 
     /**

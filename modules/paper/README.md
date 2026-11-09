@@ -41,6 +41,8 @@ not a new Hyperion release. Hyperion does not start without it.
 | `animation.molang` | The part of Molang Blockbench keyframes use |
 | `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
 | `bedrock` | Telling Bedrock players apart, the Bedrock pack, and the link the Geyser extension follows |
+| `effect` | `HyperionEffects` (loading, finding and playing effects), `EffectLoader` (YAML and model JSON into effects), `CompiledEffect` (an effect's steps, built once) and `EffectShow` (one play) |
+| `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts and events |
 
 ## Models
 
@@ -77,13 +79,16 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy remove [radius]` | `hyperion.command.remove` | Remove the nearest model, or every model within the radius |
 | `/hy animate play <animation> [speed]` | `hyperion.command.animate` | Play an animation on the nearest model |
 | `/hy animate stop [animation]` | `hyperion.command.animate` | Stop one animation, or all of them, on the nearest model |
+| `/hy effect play <effect> [--here]` | `hyperion.command.effect` | Play an effect on the nearest model, or where you stand |
+| `/hy effect stop` | `hyperion.command.effect` | Stop every effect within 16 blocks |
+| `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
 | `/hy pack send [players]` | `hyperion.command.pack.send` | Offer the pack again, to some players or everyone |
 | `/hy pack status` | `hyperion.command.pack.status` | Hosting, link, size and hash, and how players are doing with it |
 | `/hy pack export` | `hyperion.command.pack.export` | Write the pack to `plugins/Hyperion/hyperion-pack.zip` |
 
-A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works. `/hy reload` also
-reads `config.yml` and `messages.yml` again and rebuilds the pack.
+A model or effect argument may leave out `hyperion:`, so `/hy info bosses/dragon` works.
+`/hy reload` also reads `config.yml`, `messages.yml` and the effects again and rebuilds the pack.
 
 `/hy spawn` puts the model on a new mob, `models.spawn-entity` in `config.yml` (a pig unless you
 change it), so it walks around and plays its idle and walk animations. The mob is hidden, silent
@@ -181,6 +186,39 @@ every model, or per entity type (`armor_stand: false`); a plugin can turn it off
 
 A player's view of a model (`Model#view`) has its own animator and look overrides: what it plays
 and sets only that player sees, on top of what everyone sees.
+
+## Effects
+
+An effect is particles and sounds on a timeline: parts, each with keyframes at ticks. Each
+top-level section of a `.yml` file in `plugins/Hyperion/effects` is one effect,
+`hyperion:<section>`; the first start writes `example.yml` with every option explained. Plugins
+add folders of their own in their own namespace, build effects in code, and add part types.
+
+| Part | What it does |
+|---|---|
+| `particle` | An emitter: a point, ring, helix, sphere or line of particles every few ticks while visible, its offset and radius eased between keyframes |
+| `sound` | A sound at each keyframe, with volume, pitch and category |
+| `burst` | A burst of particles at each keyframe |
+| `event` | `EffectKeyframeEvent` at each keyframe, with the keyframe's name |
+
+An effect follows what it is played on: a model, a bone, a Blockbench locator, an entity or a
+spot. A part sits at that anchor, a bone or locator of its model, or another part, with an offset
+to the right, up and forward that turns with it, so a breath on a jaw tilts with the jaw.
+
+**From Blockbench.** A model's animations play their effect keyframes as the playhead passes
+them, at any speed and on every loop. A sound keyframe plays its sound. A particle keyframe plays
+the effect it names at its locator: the model's own, a full key, or `hyperion:<name>`; a plain
+particle name gives a burst of that particle. A timeline keyframe fires `AnimationKeyframeEvent`
+with its script. An animation in a player's view plays its effects to that player only.
+
+**Inside a model.** A model may carry effects of its own in a `hyperion_effects` field of its
+`.bbmodel`, in the same form as the YAML, as `<model key>/<name>`. Blockbench keeps the field
+when it saves, and it is where a Blockbench plugin for building scenes will write.
+
+An effect on a model plays inside the model's frame, after the bones moved; one on an entity or
+a spot runs on that entity's or region's scheduler. Particles and sounds go to each viewer as
+packets: the model's viewers, `nearby:<radius>` or `everyone`. `effects.particle-multiplier`
+scales every particle count. Problems in an effect file show in `/hy validate`.
 
 ## Bedrock
 

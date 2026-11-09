@@ -36,6 +36,10 @@ final class PlayingAnimation implements AnimationHandle {
     private int fadeLeft = -1;
     private float frame;
     private float weight;
+    private boolean fresh = true;
+    private float passedFrom;
+    private float passedTo;
+    private boolean passedWrapped;
 
     /**
      * Start an animation.
@@ -62,6 +66,9 @@ final class PlayingAnimation implements AnimationHandle {
      * Move one tick on. Call once per frame on the owning thread.
      */
     void advance() {
+        this.passedFrom = 0f;
+        this.passedTo = 0f;
+        this.passedWrapped = false;
         if (this.ended) {
             return;
         }
@@ -116,13 +123,18 @@ final class PlayingAnimation implements AnimationHandle {
             this.loopWait--;
             if (this.loopWait == 0) {
                 this.frame = 0f;
+                this.passed(-1f, 0f, false);
             }
 
             return true;
         }
 
+        // The first step starts just before 0, so keyframes on tick 0 fire.
+        float before = this.fresh ? -1f : this.frame;
+        this.fresh = false;
         this.frame += this.speed;
         if (this.frame < length) {
+            this.passed(before, this.frame, false);
             return true;
         }
 
@@ -131,13 +143,19 @@ final class PlayingAnimation implements AnimationHandle {
                 if (this.baked.loopDelay() > 0) {
                     this.frame = length;
                     this.loopWait = this.baked.loopDelay();
+                    this.passed(before, length, false);
                 } else {
                     this.frame = length > 0f ? this.frame % length : 0f;
+                    this.passed(before, this.frame, true);
                 }
             }
-            case HOLD -> this.frame = length;
+            case HOLD -> {
+                this.frame = length;
+                this.passed(before, length, false);
+            }
             case ONCE -> {
                 this.frame = length;
+                this.passed(before, length, false);
                 this.finished = true;
                 if (this.fadeLeft < 0) {
                     if (this.fadeOut == 0) {
@@ -151,6 +169,34 @@ final class PlayingAnimation implements AnimationHandle {
         }
 
         return true;
+    }
+
+    /**
+     * Note the stretch of frames this tick moved over, for the effect keyframes in it.
+     *
+     * @param from the frame before, left out
+     * @param to the frame after, included
+     * @param wrapped true when the stretch ran past the end and on from the start
+     */
+    private void passed(final float from, final float to, final boolean wrapped) {
+        this.passedFrom = from;
+        this.passedTo = to;
+        this.passedWrapped = wrapped;
+    }
+
+    /**
+     * Return whether this tick moved over a tick of the animation, so an effect keyframe there
+     * fires once, loops included.
+     *
+     * @param tick the tick of the animation
+     * @return true when the playhead passed it this tick
+     */
+    boolean passed(final int tick) {
+        if (this.passedWrapped) {
+            return (tick > this.passedFrom && tick <= this.baked.length()) || tick <= this.passedTo;
+        }
+
+        return tick > this.passedFrom && tick <= this.passedTo;
     }
 
     /**

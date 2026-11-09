@@ -73,6 +73,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
     private final Map<UUID, HyperionModel> models = new ConcurrentHashMap<>();
     private final Map<Integer, List<HyperionModel>> byEntity = new ConcurrentHashMap<>();
     private final ModelInteractions interactions = new ModelInteractions();
+    private volatile ModelEffects effects = ModelEffects.NONE;
     private volatile ModelSettings settings;
     private volatile PartItems items;
     private volatile String baseItem;
@@ -503,6 +504,42 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
      */
     public ModelInteractions interactions() {
         return this.interactions;
+    }
+
+    /**
+     * Play the effect keyframes models' animations pass from now on. Call once, on enable.
+     *
+     * @param effects what plays them
+     */
+    public void effects(final ModelEffects effects) {
+        this.effects = effects;
+    }
+
+    /**
+     * Return what plays the effect keyframes models' animations pass.
+     *
+     * @return the effects
+     */
+    ModelEffects effects() {
+        return this.effects;
+    }
+
+    /**
+     * Run a task inside a model's frames, from its next frame on, until it is done or the model
+     * is removed. Safe from any thread.
+     *
+     * @param model the model
+     * @param task the task
+     * @return false when the model is not one of Hyperion's or is removed
+     */
+    public boolean attach(final Model model, final ModelTask task) {
+        if (!(model instanceof HyperionModel live) || live.isRemoved()) {
+            return false;
+        }
+
+        live.runOnOwner(() -> live.attach(task));
+
+        return true;
     }
 
     /**

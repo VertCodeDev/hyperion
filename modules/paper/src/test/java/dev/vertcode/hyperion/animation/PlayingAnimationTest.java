@@ -1,6 +1,7 @@
 package dev.vertcode.hyperion.animation;
 
 import java.lang.reflect.Proxy;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -78,6 +79,40 @@ class PlayingAnimationTest {
         assertTrue(playing.applies());
     }
 
+    @Test
+    void passesEveryEffectKeyframeOncePerRunLoopsIncluded() {
+        PlayingAnimation playing = playing(LoopMode.LOOP, 1f, 0, 0, 0);
+        int[] keyframes = {0, 10, 20};
+        int[] fired = new int[keyframes.length];
+        for (int i = 0; i < 45; i++) {
+            playing.advance();
+            for (int k = 0; k < keyframes.length; k++) {
+                if (playing.passed(keyframes[k])) {
+                    fired[k]++;
+                }
+            }
+        }
+
+        // 45 ticks of a 20 tick loop: the start and two wraps reach tick 0, two runs reach 10 and 20.
+        assertEquals(3, fired[0]);
+        assertEquals(2, fired[1]);
+        assertEquals(2, fired[2]);
+    }
+
+    @Test
+    void passesKeyframesItSkipsOverAtSpeed() {
+        PlayingAnimation playing = playing(LoopMode.ONCE, 3f, 0, 0, 0);
+        int fired = 0;
+        for (int i = 0; i < 10; i++) {
+            playing.advance();
+            if (playing.passed(7)) {
+                fired++;
+            }
+        }
+
+        assertEquals(1, fired);
+    }
+
     private static PlayingAnimation playing(
             final LoopMode loop,
             final float speed,
@@ -91,7 +126,7 @@ class PlayingAnimationTest {
                 (proxy, method, arguments) -> null
         );
         ModelAnimator animator = new ModelAnimator(model, name -> Optional.empty(), null, Logger.getAnonymousLogger());
-        BakedAnimation baked = new BakedAnimation("test", loop, 20f, false, startDelay, 0, Map.of());
+        BakedAnimation baked = new BakedAnimation("test", loop, 20f, false, startDelay, 0, Map.of(), List.of());
         PlaySettings settings = new PlaySettings(loop);
         settings.speed(speed).fadeIn(fadeIn).fadeOut(fadeOut);
         PlayingAnimation playing = new PlayingAnimation(animator, baked, settings);

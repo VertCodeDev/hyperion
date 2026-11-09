@@ -34,7 +34,7 @@ import dev.vertcode.hyperion.api.model.Model;
 public final class ModelAnimator implements Animator {
 
     private static final String NO_ANIMATION = "The model %s has no animation named '%s'";
-    private static final String END_FAILED = "An animation end action on %s failed";
+    private static final String END_FAILED = "An animation end action or effect keyframe on %s failed";
 
     private final Model model;
     private final Function<String, Optional<BakedAnimation>> animations;
@@ -43,6 +43,7 @@ public final class ModelAnimator implements Animator {
     private final List<PlayingAnimation> playing = new CopyOnWriteArrayList<>();
     private final Queue<Runnable> later = new ConcurrentLinkedQueue<>();
     private final float[] scratch = new float[9];
+    private volatile @Nullable EffectSink effects;
 
     /**
      * Create an animator.
@@ -160,6 +161,7 @@ public final class ModelAnimator implements Animator {
             }
 
             animation.advance();
+            this.fireEffects(animation);
             if (animation.ended()) {
                 ended.add(animation);
             }
@@ -172,6 +174,33 @@ public final class ModelAnimator implements Animator {
                 this.run(end);
             }
         }
+    }
+
+    /**
+     * Hand every effect keyframe this tick passed to the sink.
+     *
+     * @param animation the animation
+     */
+    private void fireEffects(final PlayingAnimation animation) {
+        EffectSink sink = this.effects;
+        if (sink == null) {
+            return;
+        }
+
+        for (TimedEffect effect : animation.baked().effects()) {
+            if (animation.passed(effect.tick())) {
+                this.run(() -> sink.passed(animation, effect, this.viewer));
+            }
+        }
+    }
+
+    /**
+     * Send the effect keyframes animations pass to a sink, which plays them.
+     *
+     * @param sink the sink
+     */
+    public void effects(final EffectSink sink) {
+        this.effects = sink;
     }
 
     /**
@@ -233,6 +262,22 @@ public final class ModelAnimator implements Animator {
      */
     void later(final Runnable action) {
         this.later.add(action);
+    }
+
+    /**
+     * Plays the effect keyframes an animation passes.
+     */
+    @FunctionalInterface
+    public interface EffectSink {
+
+        /**
+         * Play one effect keyframe. Called on the thread that owns the model.
+         *
+         * @param animation the animation that passed it
+         * @param effect the keyframe
+         * @param viewer the player the animation plays for, or null when it plays for everyone
+         */
+        void passed(AnimationHandle animation, TimedEffect effect, @Nullable Player viewer);
     }
 
     /**

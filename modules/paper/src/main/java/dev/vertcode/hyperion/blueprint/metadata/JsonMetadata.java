@@ -52,6 +52,17 @@ public final class JsonMetadata implements Metadata {
         return kept.isEmpty() ? EMPTY : new JsonMetadata(kept);
     }
 
+    /**
+     * Return a field that holds a JSON object, such as the {@code hyperion_effects} a model
+     * carries.
+     *
+     * @param field the field's name
+     * @return a copy of the object, or empty when the field is not one
+     */
+    public Optional<JsonObject> object(final String field) {
+        return this.fields.get(field) instanceof JsonObject object ? Optional.of(object.deepCopy()) : Optional.empty();
+    }
+
     @Override
     public Set<String> fields() {
         return Collections.unmodifiableSet(this.fields.keySet());

@@ -79,6 +79,8 @@ validate:
   warning: " <warning><issue>"
   error: " <error><issue>"
   more: " <dim>...and <count> more in the server log"
+  effects-heading: "<primary>Effect files with issues <dim>(<count>)"
+  effect-file: " <text><file>"
 
 # The resource pack
 pack:
@@ -130,6 +132,19 @@ animate:
   stopped-all: "<prefix><text>Stopped every animation on <highlight><model></highlight>."
   no-model: "<prefix><error>No model within <radius> blocks."
   no-animation: "<prefix><error><model> has no animation named '<animation>'."
+
+# /hy effect
+effect:
+  playing: "<prefix><text>Playing <highlight><effect></highlight> <target>."
+  on-model: "on <highlight><model></highlight>"
+  here: "where you stand"
+  no-effect: "<prefix><error>No effect is named '<effect>'. See /hy effect list."
+  stopped: "<prefix><text>Stopped <highlight><count></highlight> effect(s) within <radius> blocks."
+  heading: "<primary>Effects <dim>(<count>)"
+  entry: " <text><effect><muted>  <parts> part(s), <duration> ticks<loop>"
+  entry-loop: ", loops"
+  entry-hover: "<muted>Play this effect"
+  empty: "<prefix><muted>No effects are loaded. Put .yml files in plugins/Hyperion/effects and run /hy reload."
 
 # The menu a sneaking right-click on a model opens
 menu:

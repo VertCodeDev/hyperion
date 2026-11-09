@@ -26,6 +26,7 @@ import dev.vertcode.hyperion.api.model.Model;
 import dev.vertcode.hyperion.api.model.RemovalReason;
 import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
 import dev.vertcode.hyperion.command.HyperionPermissions;
+import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.model.HyperionModelRegistry;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.ui.Menus;
@@ -43,6 +44,7 @@ public final class ModelListener implements Listener {
     private final ModelManager models;
     private final HyperionModelRegistry registry;
     private final HyperionBehaviorRegistry behaviors;
+    private final HyperionEffects effects;
     private final Plugin plugin;
     private final Menus menus;
 
@@ -52,6 +54,7 @@ public final class ModelListener implements Listener {
      * @param models the live models
      * @param registry the blueprints, for dropping a disabled plugin's models
      * @param behaviors the behavior types, for dropping a disabled plugin's types
+     * @param effects the effects, for dropping a disabled plugin's effects and part types
      * @param plugin the plugin, which the menus schedule with
      * @param menus opens a model's menu
      */
@@ -59,12 +62,14 @@ public final class ModelListener implements Listener {
             final ModelManager models,
             final HyperionModelRegistry registry,
             final HyperionBehaviorRegistry behaviors,
+            final HyperionEffects effects,
             final Plugin plugin,
             final Menus menus
     ) {
         this.models = models;
         this.registry = registry;
         this.behaviors = behaviors;
+        this.effects = effects;
         this.plugin = plugin;
         this.menus = menus;
     }
@@ -162,5 +167,6 @@ public final class ModelListener implements Listener {
     public void onPluginDisable(final PluginDisableEvent event) {
         this.registry.unregisterAll(event.getPlugin());
         this.behaviors.unregisterAll(event.getPlugin());
+        this.effects.unregisterAll(event.getPlugin());
     }
 }

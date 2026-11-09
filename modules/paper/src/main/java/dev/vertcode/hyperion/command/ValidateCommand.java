@@ -1,6 +1,8 @@
 package dev.vertcode.hyperion.command;
 
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
@@ -21,6 +23,7 @@ import dev.vertcode.hyperion.blueprint.IssueSeverity;
 import dev.vertcode.hyperion.blueprint.LoadIssue;
 import dev.vertcode.hyperion.blueprint.LoadReport;
 import dev.vertcode.hyperion.config.HyperionMessages;
+import dev.vertcode.hyperion.effect.HyperionEffects;
 
 import static dev.vertcode.hyperion.config.HyperionMessages.value;
 
@@ -32,14 +35,17 @@ public final class ValidateCommand {
     private static final int MAX_ISSUES = 30;
 
     private final BlueprintRegistry registry;
+    private final HyperionEffects effects;
 
     /**
      * Create the command.
      *
-     * @param registry where the load reports come from
+     * @param registry where the models' load reports come from
+     * @param effects where the effects' load reports come from
      */
-    public ValidateCommand(final BlueprintRegistry registry) {
+    public ValidateCommand(final BlueprintRegistry registry, final HyperionEffects effects) {
         this.registry = registry;
+        this.effects = effects;
     }
 
     /**
@@ -102,11 +108,63 @@ public final class ValidateCommand {
             ));
         }
 
-        if (withIssues == 0) {
+        Component effectIssues = this.effectIssues();
+        if (withIssues == 0 && effectIssues == null) {
             return HyperionMessages.VALIDATE__ALL_CLEAN.component(value("count", reports.size()));
         }
 
-        return HyperionMessages.VALIDATE__HEADING.component(value("count", withIssues)).append(lines.build());
+        TextComponent.Builder message = Component.text();
+        if (withIssues > 0) {
+            message.append(HyperionMessages.VALIDATE__HEADING.component(value("count", withIssues))).append(lines.build());
+        }
+
+        if (effectIssues != null) {
+            if (withIssues > 0) {
+                message.appendNewline();
+            }
+
+            message.append(effectIssues);
+        }
+
+        return message.build();
+    }
+
+    /**
+     * Write every issue of the effect files and models' effects that have any.
+     *
+     * @return the message, or null when every effect loaded without problems
+     */
+    private @Nullable Component effectIssues() {
+        TextComponent.Builder lines = Component.text();
+        int files = 0;
+        int shown = 0;
+        for (Map.Entry<String, LoadReport> entry : new TreeMap<>(this.effects.reports()).entrySet()) {
+            List<LoadIssue> issues = entry.getValue().issues();
+            if (issues.isEmpty()) {
+                continue;
+            }
+
+            files++;
+            lines.appendNewline().append(HyperionMessages.VALIDATE__EFFECT_FILE.component(value("file", entry.getKey())));
+            for (int i = 0; i < issues.size(); i++) {
+                if (shown++ == MAX_ISSUES) {
+                    lines.appendNewline().append(HyperionMessages.VALIDATE__MORE.component(value("count", issues.size() - i)));
+                    break;
+                }
+
+                LoadIssue issue = issues.get(i);
+                HyperionMessages line = issue.severity() == IssueSeverity.ERROR
+                        ? HyperionMessages.VALIDATE__ERROR
+                        : HyperionMessages.VALIDATE__WARNING;
+                lines.appendNewline().append(line.component(value("issue", issue.describe())));
+            }
+        }
+
+        if (files == 0) {
+            return null;
+        }
+
+        return HyperionMessages.VALIDATE__EFFECTS_HEADING.component(value("count", files)).append(lines.build());
     }
 
     /**

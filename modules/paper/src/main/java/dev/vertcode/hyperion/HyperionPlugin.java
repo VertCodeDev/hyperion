@@ -29,6 +29,7 @@ import dev.vertcode.hyperion.command.HyperionCommands;
 import dev.vertcode.hyperion.config.HyperionConfig;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessageBook;
+import dev.vertcode.hyperion.effect.HyperionEffects;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
 import dev.vertcode.hyperion.listener.HitboxListener;
@@ -51,6 +52,7 @@ public final class HyperionPlugin extends JavaPlugin {
     private @Nullable BlueprintRegistry registry;
     private @Nullable PackManager packs;
     private @Nullable ModelManager models;
+    private @Nullable HyperionEffects effects;
     private List<PacketListenerCommon> packetListeners = List.of();
     private @Nullable BedrockLink bedrockLink;
 
@@ -96,9 +98,15 @@ public final class HyperionPlugin extends JavaPlugin {
         packs.onBuilt(models::refresh);
         this.models = models;
 
+        // Effects
+        HyperionEffects effects = new HyperionEffects(this, models, registry, config.effects());
+        models.effects(effects);
+        async.execute(() -> effects.registerFolder(this, HyperionEffects.NAMESPACE, effects.prepareFolder()));
+        this.effects = effects;
+
         // Api
         HyperionModelRegistry modelRegistry = new HyperionModelRegistry(registry, models, packs);
-        Hyperion.install(new HyperionService(modelRegistry, models, behaviors, formats));
+        Hyperion.install(new HyperionService(modelRegistry, models, behaviors, formats, effects));
         registry.reloadAll()
                 .whenComplete(this::logLoad)
                 .thenCompose(result -> packs.rebuild());
@@ -107,7 +115,7 @@ public final class HyperionPlugin extends JavaPlugin {
         events.registerEvents(new PackListener(packs), this);
         events.registerEvents(new BedrockListener(bedrock), this);
         Menus menus = Menus.load(this, version);
-        events.registerEvents(new ModelListener(models, modelRegistry, behaviors, this, menus), this);
+        events.registerEvents(new ModelListener(models, modelRegistry, behaviors, effects, this, menus), this);
         events.registerEvents(new SeatListener(models), this);
         EventManager packets = PacketEvents.getAPI().getEventManager();
         this.packetListeners = List.of(
@@ -117,12 +125,16 @@ public final class HyperionPlugin extends JavaPlugin {
         );
 
         // Commands
-        HyperionCommands.register(this, registry, packs, models);
+        HyperionCommands.register(this, registry, packs, models, effects);
     }
 
     @Override
     public void onDisable() {
-        // Models
+        // Effects, then models
+        if (this.effects != null) {
+            this.effects.stopAll();
+        }
+
         if (this.models != null) {
             this.models.shutdown();
         }
@@ -161,6 +173,11 @@ public final class HyperionPlugin extends JavaPlugin {
 
         if (this.models != null) {
             this.models.configure(config.models(), config.pack());
+        }
+
+        if (this.effects != null) {
+            this.effects.configure(config.effects());
+            this.effects.reload();
         }
     }
 
