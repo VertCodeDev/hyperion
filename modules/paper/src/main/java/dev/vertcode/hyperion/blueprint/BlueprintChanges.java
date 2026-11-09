@@ -50,8 +50,8 @@ public record BlueprintChanges(
 
         List<String> changed = new ArrayList<>();
         for (String name : afterAnimations) {
-            Optional<Animation> old = before.animation(name);
-            if (old.isPresent() && !old.equals(after.animation(name))) {
+            Optional<Animation> old = before.animationData(name);
+            if (old.isPresent() && !old.equals(after.animationData(name))) {
                 changed.add(name);
             }
         }

@@ -14,6 +14,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Unmodifiable;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.api.animation.AnimationBlueprint;
 import dev.vertcode.hyperion.api.model.bone.BoneBlueprint;
 import dev.vertcode.hyperion.api.model.locator.LocatorBlueprint;
 import dev.vertcode.hyperion.api.model.metadata.Metadata;
@@ -90,6 +91,14 @@ public interface ModelBlueprint extends Keyed {
      * @return the animation names
      */
     @Unmodifiable Set<String> animations();
+
+    /**
+     * Find an animation by its name, to read its length and loop mode before playing it.
+     *
+     * @param name the animation's name
+     * @return the animation, or empty if there is none by that name
+     */
+    Optional<AnimationBlueprint> animation(String name);
 
     /**
      * Return the custom data stored on the Blockbench project.

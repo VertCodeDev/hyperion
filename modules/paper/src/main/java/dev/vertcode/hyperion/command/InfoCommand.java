@@ -154,7 +154,7 @@ public final class InfoCommand {
         int count = blueprint.animations().size();
         message.appendNewline().append(HyperionMessages.INFO__ANIMATIONS.component(value("count", count)));
         for (String name : blueprint.animations()) {
-            Animation animation = blueprint.animation(name).orElseThrow();
+            Animation animation = blueprint.animationData(name).orElseThrow();
             message.appendNewline().append(HyperionMessages.INFO__ANIMATION.component(
                     value("name", name),
                     value("length", decimals(animation.length())),

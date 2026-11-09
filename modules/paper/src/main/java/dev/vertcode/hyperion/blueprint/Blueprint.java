@@ -17,6 +17,7 @@ import org.bukkit.util.BoundingBox;
 import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.animation.BakedAnimation;
+import dev.vertcode.hyperion.api.animation.AnimationBlueprint;
 import dev.vertcode.hyperion.api.model.EntityAnchor;
 import dev.vertcode.hyperion.api.model.LocationAnchor;
 import dev.vertcode.hyperion.api.model.Model;
@@ -53,6 +54,7 @@ public final class Blueprint implements ModelBlueprint {
     private final List<LocatorBlueprint> apiLocators;
     private final Map<String, BlueprintLocator> locatorsByName;
     private final Map<String, Animation> animations;
+    private final Map<String, BlueprintAnimation> apiAnimations;
     private final Map<String, BakedAnimation> baked;
     private final BoundingBox boundingBox;
     private final LoadReport report;
@@ -104,6 +106,9 @@ public final class Blueprint implements ModelBlueprint {
         this.apiLocators = List.copyOf(this.locators);
         this.locatorsByName = Map.copyOf(locators);
         this.animations = Collections.unmodifiableMap(new LinkedHashMap<>(animations));
+        Map<String, BlueprintAnimation> apiAnimations = new LinkedHashMap<>();
+        animations.forEach((name, animation) -> apiAnimations.put(name, BlueprintAnimation.of(animation)));
+        this.apiAnimations = Map.copyOf(apiAnimations);
         this.baked = Map.copyOf(baked);
         this.boundingBox = boundingBox.clone();
         this.report = report;
@@ -223,7 +228,18 @@ public final class Blueprint implements ModelBlueprint {
      * @param name the animation's name
      * @return the animation, or empty if there is none by that name
      */
-    public Optional<Animation> animation(final String name) {
+    @Override
+    public Optional<AnimationBlueprint> animation(final String name) {
+        return Optional.ofNullable(this.apiAnimations.get(name));
+    }
+
+    /**
+     * Find an animation by its name, with its keyframes as saved.
+     *
+     * @param name the animation's name
+     * @return the animation, or empty if there is none by that name
+     */
+    public Optional<Animation> animationData(final String name) {
         return Optional.ofNullable(this.animations.get(name));
     }
 
