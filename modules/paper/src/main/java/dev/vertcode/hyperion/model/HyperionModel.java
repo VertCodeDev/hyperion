@@ -52,11 +52,15 @@ import dev.vertcode.hyperion.api.model.ModelScaler;
 import dev.vertcode.hyperion.api.model.RemovalReason;
 import dev.vertcode.hyperion.api.model.behavior.BehaviorType;
 import dev.vertcode.hyperion.api.model.behavior.BoneBehavior;
+import dev.vertcode.hyperion.api.model.behavior.builtin.GhostBehavior;
+import dev.vertcode.hyperion.api.model.behavior.builtin.SeatBehavior;
 import dev.vertcode.hyperion.api.model.bone.Bone;
 import dev.vertcode.hyperion.api.model.bone.BoneBlueprint;
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
 import dev.vertcode.hyperion.api.model.bone.ItemContext;
 import dev.vertcode.hyperion.api.model.bone.ItemSource;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxBehavior;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.locator.Locator;
 import dev.vertcode.hyperion.api.model.view.PlayerView;
 import dev.vertcode.hyperion.api.model.view.Viewers;
@@ -161,6 +165,8 @@ final class HyperionModel implements Model {
     private boolean lookChangedThisFrame;
     private final int standIn = SpigotReflectionUtil.generateEntityId();
     private @Nullable BedrockState bedrockState;
+    private final HitboxMode hitboxMode;
+    private @Nullable ModelBox box;
     private int stillTicks = STILL_TICKS;
     private double lastX;
     private double lastZ;
@@ -200,6 +206,7 @@ final class HyperionModel implements Model {
         this.rotator = options.rotator;
         this.interpolation = options.interpolation;
         this.hiddenParts = this.entity == null ? EntityPart.NONE : Set.copyOf(options.hiddenParts);
+        this.hitboxMode = options.hitboxMode != null ? options.hitboxMode : manager.settings().behaviors().hitboxMode();
         this.buildBones(blueprint, false);
         this.buildDisplays();
         this.animator = this.newAnimator(null);
@@ -223,6 +230,7 @@ final class HyperionModel implements Model {
             }
         }
 
+        this.syncBox();
         if (this.startAnimation != null) {
             this.animator.play(this.startAnimation);
         }
@@ -265,6 +273,49 @@ final class HyperionModel implements Model {
 
         this.render(here);
         this.publishBedrock();
+        this.afterFrame();
+    }
+
+    /**
+     * Let the behaviors and the box around the model place their own entities, now that the
+     * bones are where this frame put them.
+     */
+    private void afterFrame() {
+        List<User> java = new ArrayList<>();
+        for (Viewer viewer : this.viewers.viewers()) {
+            if (!viewer.bedrock()) {
+                java.add(viewer.user());
+            }
+        }
+
+        for (HyperionBone bone : this.bones) {
+            for (BoneBehavior behavior : bone.behaviors()) {
+                if (behavior instanceof FrameBehavior placed) {
+                    this.runBehavior(bone, behavior, each -> placed.afterFrame(java));
+                }
+            }
+        }
+
+        ModelBox current = this.box;
+        if (current != null) {
+            current.place(java);
+        }
+    }
+
+    /**
+     * Give the model one box around all of it when its hitbox mode asks for one, or when it has
+     * no hitbox bones, and take the box away when neither holds anymore.
+     */
+    private void syncBox() {
+        boolean wanted = this.hitboxMode == HitboxMode.MODEL || this.behaviors(HitboxBehavior.class).isEmpty();
+        ModelBox current = this.box;
+        if (wanted && current == null) {
+            boolean forwards = this.manager.settings().behaviors().forwardDamage();
+            this.box = new ModelBox(this, this.manager.interactions(), forwards);
+        } else if (!wanted && current != null) {
+            current.remove();
+            this.box = null;
+        }
     }
 
     /**
@@ -405,6 +456,11 @@ final class HyperionModel implements Model {
             if (restoreEntity && this.entity != null) {
                 this.restoreEntity(viewer, this.entity);
             }
+        }
+
+        ModelBox current = this.box;
+        if (current != null) {
+            current.hide(viewer.player().getUniqueId());
         }
 
         Bukkit.getPluginManager().callEvent(new ModelViewerEvent(this, viewer.player(), false));
@@ -1556,7 +1612,7 @@ final class HyperionModel implements Model {
         for (HyperionBone bone : this.bones) {
             bone.displays().clear();
             bone.itemDisplay(null);
-            if (current == null) {
+            if (current == null || hidesCubes(bone)) {
                 continue;
             }
 
@@ -1568,6 +1624,23 @@ final class HyperionModel implements Model {
         }
 
         this.displayIds = ids(this.displays);
+    }
+
+    /**
+     * Return whether a bone's own cubes are never drawn: a ghost, or a hitbox, whose cubes only
+     * give its size.
+     *
+     * @param bone the bone
+     * @return true when the bone gets no displays for its cubes
+     */
+    private static boolean hidesCubes(final HyperionBone bone) {
+        for (BoneBehavior behavior : bone.behaviors()) {
+            if (behavior instanceof GhostBehavior || behavior instanceof HitboxBehavior) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -1594,6 +1667,7 @@ final class HyperionModel implements Model {
         if (next != this.blueprint) {
             this.blueprint = next;
             this.buildBones(next, true);
+            this.syncBox();
             this.animator.rebind();
             for (HyperionPlayerView view : this.views.values()) {
                 view.modelAnimator().rebind();
@@ -1639,6 +1713,7 @@ final class HyperionModel implements Model {
         }
 
         this.dropBedrock(bedrock);
+        this.removeBox();
 
         for (HyperionBone bone : this.bones) {
             for (BoneBehavior behavior : bone.behaviors()) {
@@ -1687,7 +1762,19 @@ final class HyperionModel implements Model {
         }
 
         this.dropBedrock(bedrock);
+        this.removeBox();
         this.manager.forget(this);
+    }
+
+    /**
+     * Take the box around the model down, when it has one.
+     */
+    private void removeBox() {
+        ModelBox current = this.box;
+        if (current != null) {
+            current.remove();
+            this.box = null;
+        }
     }
 
     /**
@@ -2119,6 +2206,35 @@ final class HyperionModel implements Model {
         }
 
         return this;
+    }
+
+    @Override
+    public <B extends BoneBehavior> List<B> behaviors(final Class<B> type) {
+        List<B> found = new ArrayList<>();
+        for (HyperionBone bone : this.bones) {
+            for (BoneBehavior behavior : bone.behaviors()) {
+                if (type.isInstance(behavior)) {
+                    found.add(type.cast(behavior));
+                }
+            }
+        }
+
+        return List.copyOf(found);
+    }
+
+    @Override
+    public List<SeatBehavior> seats() {
+        return this.behaviors(SeatBehavior.class);
+    }
+
+    @Override
+    public List<HitboxBehavior> hitboxes() {
+        return this.behaviors(HitboxBehavior.class);
+    }
+
+    @Override
+    public HitboxMode hitboxMode() {
+        return this.hitboxMode;
     }
 
     @Override

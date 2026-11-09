@@ -1,14 +1,22 @@
 package dev.vertcode.hyperion.config;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
+import net.kyori.adventure.key.Key;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.Plugin;
+import org.jspecify.annotations.Nullable;
+
+import dev.vertcode.hyperion.api.model.behavior.builtin.BuiltinBehaviors;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 
 /**
  * Hyperion's settings from {@code config.yml}.
@@ -37,6 +45,15 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
     private static final int DEFAULT_VIEW_DISTANCE = 48;
     private static final int DEFAULT_INTERPOLATION = 2;
     private static final String AUTO = "models.auto-animations.";
+    private static final String BEHAVIORS = "behaviors.";
+    private static final String STEERING = "behaviors.seats.steering.";
+    private static final float DEFAULT_MAX_YAW = 50f;
+    private static final float DEFAULT_MAX_PITCH = 40f;
+    private static final float DEFAULT_SPEED = 0.25f;
+    private static final float DEFAULT_JUMP = 0.5f;
+    private static final float MAX_YAW = 180f;
+    private static final float MAX_PITCH = 90f;
+    private static final Map<String, Key> BEHAVIOR_NAMES = behaviorNames();
 
     /**
      * Read {@code config.yml} from the data folder, writing or completing it from the jar first.
@@ -102,7 +119,13 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
             spawnEntity = spawnEntity.substring(MINECRAFT.length());
         }
 
-        ModelSettings models = new ModelSettings(viewDistance, interpolation, autoAnimations(config), spawnEntity);
+        ModelSettings models = new ModelSettings(
+                viewDistance,
+                interpolation,
+                autoAnimations(config),
+                spawnEntity,
+                behaviors(config, logger)
+        );
 
         int linkPort = config.getInt("bedrock.link-port", DEFAULT_LINK_PORT);
         if (linkPort < 1 || linkPort > MAX_PORT) {
@@ -123,25 +146,116 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
      * @return the settings
      */
     private static AutoAnimations autoAnimations(final ConfigurationSection config) {
-        Map<String, Boolean> entities = new HashMap<>();
-        ConfigurationSection section = config.getConfigurationSection(AUTO + "entities");
-        if (section != null) {
-            for (String key : section.getKeys(false)) {
-                String type = key.trim().toLowerCase(Locale.ROOT);
-                if (type.startsWith(MINECRAFT)) {
-                    type = type.substring(MINECRAFT.length());
-                }
-
-                entities.put(type, section.getBoolean(key));
-            }
-        }
-
         return new AutoAnimations(
                 config.getBoolean(AUTO + "enabled", true),
                 config.getString(AUTO + "idle", "idle"),
                 config.getString(AUTO + "walk", "walk"),
-                entities
+                entityChoices(config.getConfigurationSection(AUTO + "entities"))
         );
+    }
+
+    /**
+     * Read a choice per entity type, such as {@code armor_stand: false}.
+     *
+     * @param section the section, or null when the file has none
+     * @return the choices by type name, without the namespace
+     */
+    private static Map<String, Boolean> entityChoices(final @Nullable ConfigurationSection section) {
+        Map<String, Boolean> entities = new HashMap<>();
+        if (section == null) {
+            return entities;
+        }
+
+        for (String key : section.getKeys(false)) {
+            String type = key.trim().toLowerCase(Locale.ROOT);
+            if (type.startsWith(MINECRAFT)) {
+                type = type.substring(MINECRAFT.length());
+            }
+
+            entities.put(type, section.getBoolean(key));
+        }
+
+        return entities;
+    }
+
+    /**
+     * Read the built-in behaviors: the bone name prefixes of each, the head's limits, the hitbox
+     * mode and the seats.
+     *
+     * @param config the contents of {@code config.yml}
+     * @param logger where unusable values are reported
+     * @return the settings
+     */
+    private static BehaviorSettings behaviors(final ConfigurationSection config, final Logger logger) {
+        Map<Key, List<String>> prefixes = new HashMap<>();
+        for (Map.Entry<String, Key> behavior : BEHAVIOR_NAMES.entrySet()) {
+            List<String> names = new ArrayList<>();
+            for (String prefix : config.getStringList(BEHAVIORS + "prefixes." + behavior.getKey())) {
+                String lowered = prefix.trim().toLowerCase(Locale.ROOT);
+                if (!lowered.isEmpty()) {
+                    names.add(lowered);
+                }
+            }
+
+            prefixes.put(behavior.getValue(), List.copyOf(names));
+        }
+
+        String modeKey = config.getString(BEHAVIORS + "hitboxes.mode", "bones").trim().toUpperCase(Locale.ROOT);
+        HitboxMode mode;
+        try {
+            mode = HitboxMode.valueOf(modeKey);
+        } catch (IllegalArgumentException exception) {
+            logger.warning(String.format(BAD_VALUE, modeKey, "behaviors.hitboxes.mode", "bones"));
+            mode = HitboxMode.BONES;
+        }
+
+        String steeringMode = config.getString(STEERING + "mode", "walking").trim().toLowerCase(Locale.ROOT);
+        if (!"walking".equals(steeringMode) && !"flying".equals(steeringMode)) {
+            logger.warning(String.format(BAD_VALUE, steeringMode, "behaviors.seats.steering.mode", "walking"));
+            steeringMode = "walking";
+        }
+
+        float speed = (float) config.getDouble(STEERING + "speed", DEFAULT_SPEED);
+        if (!(speed > 0f)) {
+            logger.warning(String.format(BAD_VALUE, speed, "behaviors.seats.steering.speed", DEFAULT_SPEED));
+            speed = DEFAULT_SPEED;
+        }
+
+        SeatSteering steering = new SeatSteering(
+                config.getBoolean(STEERING + "enabled", false),
+                "flying".equals(steeringMode),
+                speed,
+                (float) Math.max(0d, config.getDouble(STEERING + "jump", DEFAULT_JUMP)),
+                entityChoices(config.getConfigurationSection(STEERING + "entities"))
+        );
+
+        return new BehaviorSettings(
+                prefixes,
+                (float) Math.clamp(config.getDouble(BEHAVIORS + "head.max-yaw", DEFAULT_MAX_YAW), 0d, MAX_YAW),
+                (float) Math.clamp(config.getDouble(BEHAVIORS + "head.max-pitch", DEFAULT_MAX_PITCH), 0d, MAX_PITCH),
+                mode,
+                config.getBoolean(BEHAVIORS + "hitboxes.forward-damage", true),
+                config.getBoolean(BEHAVIORS + "seats.click-to-ride", true),
+                steering
+        );
+    }
+
+    /**
+     * Map each built-in behavior's name in {@code config.yml} to its key.
+     *
+     * @return the keys by name, such as {@code main-hand}
+     */
+    private static Map<String, Key> behaviorNames() {
+        Map<String, Key> names = new LinkedHashMap<>();
+        names.put("head", BuiltinBehaviors.HEAD);
+        names.put("hitbox", BuiltinBehaviors.HITBOX);
+        names.put("seat", BuiltinBehaviors.SEAT);
+        names.put("nametag", BuiltinBehaviors.NAMETAG);
+        names.put("main-hand", BuiltinBehaviors.MAIN_HAND);
+        names.put("off-hand", BuiltinBehaviors.OFF_HAND);
+        names.put("ghost", BuiltinBehaviors.GHOST);
+
+        return Map.copyOf(names);
     }
 
     /**

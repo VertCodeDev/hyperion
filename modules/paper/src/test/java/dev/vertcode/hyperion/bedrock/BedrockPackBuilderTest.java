@@ -22,6 +22,7 @@ import dev.vertcode.hyperion.blueprint.data.Cube;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BedrockPackBuilderTest {
@@ -60,6 +61,22 @@ class BedrockPackBuilderTest {
 
         assertEquals(-first.to().x(), origin.get(0).getAsFloat(), 1.0e-3f);
         assertEquals(first.from().y(), origin.get(1).getAsFloat(), 1.0e-3f);
+    }
+
+    @Test
+    void leavesOutTheCubesOfBonesThatAreNeverDrawn() throws IOException {
+        Blueprint blueprint = Fixtures.blueprint("groups_layout", new LoadReport("groups_layout.bbmodel"));
+        Map<String, byte[]> files = unzip(BedrockPackBuilder.build(List.of(blueprint), bone -> "head".equals(bone.name())).zip());
+        String slug = BedrockIds.slug(blueprint.key());
+        JsonArray bones = json(files, "models/entity/" + slug + ".geo.json")
+                .getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject()
+                .getAsJsonArray("bones");
+        JsonObject body = bones.get(0).getAsJsonObject();
+        JsonObject head = bones.get(1).getAsJsonObject();
+
+        assertEquals("head", head.get("name").getAsString());
+        assertFalse(head.has("cubes"));
+        assertTrue(body.has("cubes"));
     }
 
     @Test

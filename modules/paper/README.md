@@ -31,12 +31,12 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
-| `config` | `HyperionConfig`, `ModelSettings` and `PackSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
+| `config` | `HyperionConfig`, `ModelSettings`, `BehaviorSettings` and `PackSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
 | `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it |
 | `model` | `ModelManager` (spawning, the tracker, following reloads), `HyperionModel` and its bones, locators and viewers, and the api's model registry |
 | `render` | The bone and part matrices, the item display's entity data, the items parts show, and the packets |
-| `behavior` | `HyperionBehaviorRegistry`: the behavior types plugins register |
-| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, and `BaseEntityListener`, the PacketEvents listener that hides an entity's parts |
+| `behavior` | `HyperionBehaviorRegistry`, the behavior types plugins register, and `BuiltinTypes`: the head, hitbox, seat, name tag, hand and ghost behaviors Hyperion ships |
+| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
 | `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
 | `animation.molang` | The part of Molang Blockbench keyframes use |
 | `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
@@ -121,8 +121,44 @@ A model leaves when it is removed, its entity dies or unloads, its blueprint is 
 the plugin disables. After a reload, live models move onto the new blueprint once the new pack is
 built, keeping what was set on bones that are still there.
 
-The built-in behaviors (head, hitbox, seat, nametag, hands) arrive in a later version. Behavior
-types other plugins register already attach to the bones they match.
+## Behaviors
+
+A bone gets a behavior when its name starts with one of the behavior's prefixes in the
+`behaviors.prefixes` section of `config.yml`, ignoring case, or when it carries the behavior's key
+as a tag. Add the names another engine uses to load its models as they are, such as `h_` for
+`head`. Prefixes are read as a model spawns, so a change reaches models spawned after
+`/hy reload`.
+
+| Behavior | Default prefix | What it does |
+|---|---|---|
+| Head | `head` | Turns with where a living entity looks, within `behaviors.head`, or towards a point a plugin sets |
+| Hitbox | `hitbox` | A box players hit and click, sized by the bone's own cubes, which are not drawn |
+| Seat | `seat` | A spot a player sits on, moving with the bone |
+| Name tag | `nametag` | The entity's custom name, or text a plugin sets, following the bone |
+| Hands | `main_hand`, `off_hand` | What the entity holds, shown on the bone; its own cubes while the hand is empty |
+| Ghost | `ghost` | Never drawn, kept for its children, locators and logic |
+
+**Hitboxes** are interactions only the model's viewers know about, moved to their bone after
+every frame. `behaviors.hitboxes.mode` picks a hitbox per hitbox bone (`bones`), or one box around
+the whole model (`model`); a model without hitbox bones gets the box either way. A hit or click
+fires `ModelInteractEvent` on the model's thread. Unless it is cancelled, the server is handed the
+same packet aimed at the entity carrying the model, so damage, reach checks and clicks work as if
+the player touched the entity. Riders never get the model's hitboxes, which would catch their
+clicks from inside.
+
+**Seats** exist only while someone sits: the rider sits on an empty item display, which rides the
+entity carrying the model so the server carries the rider along. The model's viewers are told the
+display rides nothing and see it moved to the seat's bone after every frame, so the rider sits
+where the model shows the seat. Right-clicking a model with a free seat sits the player in it
+(`behaviors.seats.click-to-ride`); sneaking gets them off, unless a plugin locked the seat. With
+`behaviors.seats.steering` on, globally or per entity type, the rider of the first seat steers:
+the entity walks and jumps, or flies, with the rider's keys, and its own AI waits until they get
+off.
+
+Sneaking and right-clicking a model on its own opens its menu, as on an entity.
+
+Head, name tag and steering are Java only for now: Bedrock players see the model's animations and
+ride its entity, but not the head turning or the name tag on the bone.
 
 ## Animations
 
@@ -233,8 +269,9 @@ owner first.
 A model is owned by its entity's scheduler, or by the region of its location. Its frames run
 there, and `spawn`, `attach`, `teleport` and `remove` must be called there. Every getter and
 appearance setter is safe from any thread and takes effect on the next frame. Packets are sent
-with PacketEvents, which is safe from any thread; the PacketEvents listener runs on Netty threads
-and reads only concurrent state.
+with PacketEvents, which is safe from any thread; the PacketEvents listeners run on Netty threads
+and read only concurrent state. A hit on a hitbox is taken off the Netty thread and handled on
+the thread that owns the model.
 
 ## Building
 

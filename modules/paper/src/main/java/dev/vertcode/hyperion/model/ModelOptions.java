@@ -11,6 +11,7 @@ import dev.vertcode.hyperion.api.model.ModelRotator;
 import dev.vertcode.hyperion.api.model.ModelScaler;
 import dev.vertcode.hyperion.api.model.SpawnOptions;
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.view.ViewerPolicy;
 import dev.vertcode.hyperion.blueprint.Blueprint;
 
@@ -42,6 +43,7 @@ final class ModelOptions implements SpawnOptions {
     Display.@Nullable Billboard billboard;
     @Nullable String animation;
     @Nullable Boolean autoAnimations;
+    @Nullable HitboxMode hitboxMode;
 
     /**
      * Start from the defaults.
@@ -195,6 +197,13 @@ final class ModelOptions implements SpawnOptions {
     @Override
     public SpawnOptions autoAnimations(final boolean enabled) {
         this.autoAnimations = enabled;
+
+        return this;
+    }
+
+    @Override
+    public SpawnOptions hitboxMode(final HitboxMode mode) {
+        this.hitboxMode = mode;
 
         return this;
     }

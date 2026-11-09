@@ -19,6 +19,9 @@ import org.bukkit.event.world.EntitiesUnloadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.Plugin;
 
+import dev.vertcode.hyperion.api.event.InteractionType;
+import dev.vertcode.hyperion.api.event.ModelInteractEvent;
+import dev.vertcode.hyperion.api.model.LocationAnchor;
 import dev.vertcode.hyperion.api.model.Model;
 import dev.vertcode.hyperion.api.model.RemovalReason;
 import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
@@ -87,6 +90,29 @@ public final class ModelListener implements Listener {
 
         event.setCancelled(true);
         this.menus.open(player, ModelMenu.of(this.plugin, this.models, carried.getFirst()));
+    }
+
+    /**
+     * Open the menu of a model on its own when a player with the menu permission sneaks and
+     * right-clicks it. Such a model has no entity, so the click arrives on its hitbox. The event
+     * fires on the model's thread; the menu opens on the player's.
+     *
+     * @param event the event
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onTouch(final ModelInteractEvent event) {
+        Player player = event.player();
+        boolean wanted = event.type() == InteractionType.INTERACT
+                && event.hand() == EquipmentSlot.HAND
+                && player.isSneaking()
+                && event.model().anchor() instanceof LocationAnchor;
+        if (!wanted || !player.hasPermission(HyperionPermissions.MENU)) {
+            return;
+        }
+
+        event.setCancelled(true);
+        Model model = event.model();
+        player.getScheduler().run(this.plugin, task -> this.menus.open(player, ModelMenu.of(this.plugin, this.models, model)), null);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -14,6 +15,9 @@ import java.util.logging.Logger;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import dev.vertcode.hyperion.api.model.behavior.builtin.BuiltinBehaviors;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -64,6 +68,41 @@ class HyperionConfigTest {
 
         assertEquals(false, auto.entities().get("armor_stand"));
         assertTrue(auto.enabled());
+    }
+
+    @Test
+    void readsTheBehaviorDefaults() {
+        BehaviorSettings behaviors = HyperionConfig.of(this.bundled, this.logger, ITEMS).models().behaviors();
+
+        assertTrue(behaviors.matches(BuiltinBehaviors.HEAD, "Head_Top"));
+        assertTrue(behaviors.matches(BuiltinBehaviors.SEAT, "seat_left"));
+        assertFalse(behaviors.matches(BuiltinBehaviors.HEAD, "h_head"));
+        assertEquals(HitboxMode.BONES, behaviors.hitboxMode());
+        assertTrue(behaviors.forwardDamage());
+        assertTrue(behaviors.clickToRide());
+        assertFalse(behaviors.steering().enabled());
+        assertEquals(50f, behaviors.headMaxYaw());
+    }
+
+    @Test
+    void readsOtherPrefixesAndSteeringPerEntityType() {
+        this.bundled.set("behaviors.prefixes.head", List.of("head", " H_ "));
+        this.bundled.set("behaviors.hitboxes.mode", "model");
+        this.bundled.set("behaviors.seats.steering.mode", "flying");
+        this.bundled.set("behaviors.seats.steering.entities.minecraft:horse", true);
+        BehaviorSettings behaviors = HyperionConfig.of(this.bundled, this.logger, ITEMS).models().behaviors();
+
+        assertTrue(behaviors.matches(BuiltinBehaviors.HEAD, "h_neck"));
+        assertEquals(HitboxMode.MODEL, behaviors.hitboxMode());
+        assertTrue(behaviors.steering().flying());
+        assertEquals(true, behaviors.steering().entities().get("horse"));
+    }
+
+    @Test
+    void fallsBackOnAnUnknownHitboxMode() {
+        this.bundled.set("behaviors.hitboxes.mode", "spheres");
+
+        assertEquals(HitboxMode.BONES, HyperionConfig.of(this.bundled, this.logger, ITEMS).models().behaviors().hitboxMode());
     }
 
     @Test

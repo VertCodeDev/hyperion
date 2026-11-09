@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.util.Vector3d;
@@ -17,7 +18,7 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSp
 import org.bukkit.Location;
 
 /**
- * The packets that show, change and remove displays.
+ * The packets that show, change and remove the entities models are made of.
  *
  * <p>Packets are sent silently, past every PacketEvents listener, Hyperion's own included, so
  * what a model sends reaches the client as built. Sending is safe from any thread.
@@ -46,10 +47,29 @@ public final class Packets {
      * @return the packet
      */
     public static WrapperPlayServerSpawnEntity spawn(final int entityId, final UUID uniqueId, final Location location) {
+        return spawn(entityId, uniqueId, EntityTypes.ITEM_DISPLAY, location);
+    }
+
+    /**
+     * Build the packet that spawns an entity of any type that only its viewers know about, such
+     * as the interaction a hitbox is or the text display of a name tag.
+     *
+     * @param entityId the entity's id
+     * @param uniqueId the entity's id
+     * @param type the entity's type
+     * @param location where it spawns
+     * @return the packet
+     */
+    public static WrapperPlayServerSpawnEntity spawn(
+            final int entityId,
+            final UUID uniqueId,
+            final EntityType type,
+            final Location location
+    ) {
         return new WrapperPlayServerSpawnEntity(
                 entityId,
                 Optional.of(uniqueId),
-                EntityTypes.ITEM_DISPLAY,
+                type,
                 new Vector3d(location.getX(), location.getY(), location.getZ()),
                 0f,
                 0f,
@@ -94,9 +114,9 @@ public final class Packets {
     }
 
     /**
-     * Build the packet that moves a display.
+     * Build the packet that moves an entity.
      *
-     * @param entityId the display's entity id
+     * @param entityId the entity's id
      * @param location where it moves to
      * @return the packet
      */

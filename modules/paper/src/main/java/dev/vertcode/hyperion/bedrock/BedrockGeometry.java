@@ -2,6 +2,7 @@ package dev.vertcode.hyperion.bedrock;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -36,9 +37,15 @@ final class BedrockGeometry {
      * @param blueprint the blueprint
      * @param slug the model's Bedrock name
      * @param atlas the model's textures, which faces' UVs point into
+     * @param hidden tells which bones' own cubes to leave out
      * @return the geometry file
      */
-    static JsonObject of(final Blueprint blueprint, final String slug, final BedrockAtlas atlas) {
+    static JsonObject of(
+            final Blueprint blueprint,
+            final String slug,
+            final BedrockAtlas atlas,
+            final Predicate<BoneBlueprint> hidden
+    ) {
         JsonObject description = new JsonObject();
         description.addProperty("identifier", "geometry.hyperion." + slug);
         description.addProperty("texture_width", atlas.width());
@@ -53,7 +60,7 @@ final class BedrockGeometry {
 
         JsonArray bones = new JsonArray();
         for (BlueprintBone bone : blueprint.blueprintBones()) {
-            bones.add(bone(bone, atlas));
+            bones.add(bone(bone, atlas, hidden.test(bone)));
         }
 
         JsonObject geometry = new JsonObject();
@@ -73,9 +80,10 @@ final class BedrockGeometry {
      *
      * @param bone the bone
      * @param atlas the model's textures
+     * @param hidden true to leave the bone's own cubes out, keeping it for its children
      * @return the bone
      */
-    private static JsonObject bone(final BlueprintBone bone, final BedrockAtlas atlas) {
+    private static JsonObject bone(final BlueprintBone bone, final BedrockAtlas atlas, final boolean hidden) {
         JsonObject json = new JsonObject();
         json.addProperty("name", bone.name());
         Optional<BoneBlueprint> parent = bone.parent();
@@ -89,7 +97,7 @@ final class BedrockGeometry {
 
         JsonArray cubes = new JsonArray();
         for (Cube cube : bone.cubes()) {
-            if (cube.visible()) {
+            if (cube.visible() && !hidden) {
                 cubes.add(cube(cube, atlas));
             }
         }

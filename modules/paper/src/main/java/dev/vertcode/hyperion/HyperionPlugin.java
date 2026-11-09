@@ -1,10 +1,12 @@
 package dev.vertcode.hyperion;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.logging.Level;
 
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.EventManager;
 import com.github.retrooper.packetevents.event.PacketListenerCommon;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import org.bukkit.plugin.PluginManager;
@@ -17,6 +19,7 @@ import dev.vertcode.hyperion.api.version.MinecraftVersion;
 import dev.vertcode.hyperion.bedrock.BedrockLink;
 import dev.vertcode.hyperion.bedrock.BedrockPlayers;
 import dev.vertcode.hyperion.bedrock.BedrockToken;
+import dev.vertcode.hyperion.behavior.BuiltinTypes;
 import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.blueprint.HyperionFormatRegistry;
@@ -28,8 +31,11 @@ import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessageBook;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
+import dev.vertcode.hyperion.listener.HitboxListener;
 import dev.vertcode.hyperion.listener.ModelListener;
 import dev.vertcode.hyperion.listener.PackListener;
+import dev.vertcode.hyperion.listener.RiderInputListener;
+import dev.vertcode.hyperion.listener.SeatListener;
 import dev.vertcode.hyperion.model.HyperionModelRegistry;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackFormat;
@@ -45,7 +51,7 @@ public final class HyperionPlugin extends JavaPlugin {
     private @Nullable BlueprintRegistry registry;
     private @Nullable PackManager packs;
     private @Nullable ModelManager models;
-    private @Nullable PacketListenerCommon packetListener;
+    private List<PacketListenerCommon> packetListeners = List.of();
     private @Nullable BedrockLink bedrockLink;
 
     @Override
@@ -84,6 +90,8 @@ public final class HyperionPlugin extends JavaPlugin {
         HyperionBehaviorRegistry behaviors = new HyperionBehaviorRegistry();
         ModelManager models = new ModelManager(this, registry, behaviors, version, config.models(), config.pack());
         models.bedrock(bedrock, link);
+        BuiltinTypes.register(this, behaviors, models);
+        packs.hiddenBones(BuiltinTypes.hidesCubes(() -> models.settings().behaviors()));
         registry.useSpawner(models);
         packs.onBuilt(models::refresh);
         this.models = models;
@@ -100,9 +108,13 @@ public final class HyperionPlugin extends JavaPlugin {
         events.registerEvents(new BedrockListener(bedrock), this);
         Menus menus = Menus.load(this, version);
         events.registerEvents(new ModelListener(models, modelRegistry, behaviors, this, menus), this);
-        this.packetListener = PacketEvents.getAPI()
-                .getEventManager()
-                .registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL);
+        events.registerEvents(new SeatListener(models), this);
+        EventManager packets = PacketEvents.getAPI().getEventManager();
+        this.packetListeners = List.of(
+                packets.registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL),
+                packets.registerListener(new HitboxListener(models), PacketListenerPriority.NORMAL),
+                packets.registerListener(new RiderInputListener(models.interactions()), PacketListenerPriority.MONITOR)
+        );
 
         // Commands
         HyperionCommands.register(this, registry, packs, models);
@@ -115,8 +127,8 @@ public final class HyperionPlugin extends JavaPlugin {
             this.models.shutdown();
         }
 
-        if (this.packetListener != null) {
-            PacketEvents.getAPI().getEventManager().unregisterListener(this.packetListener);
+        for (PacketListenerCommon listener : this.packetListeners) {
+            PacketEvents.getAPI().getEventManager().unregisterListener(listener);
         }
 
         if (this.bedrockLink != null) {

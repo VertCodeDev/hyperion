@@ -4,10 +4,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import dev.vertcode.hyperion.api.model.bone.BoneBlueprint;
 import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.pack.PackWriter;
 
@@ -41,11 +43,22 @@ public final class BedrockPackBuilder {
      * @return the pack and the model list
      */
     public static BedrockPack build(final List<Blueprint> blueprints) {
+        return build(blueprints, bone -> false);
+    }
+
+    /**
+     * Build the pack for some blueprints, leaving out the cubes of bones that are never drawn.
+     *
+     * @param blueprints the blueprints
+     * @param hidden tells which bones' own cubes to leave out, such as ghosts and hitboxes
+     * @return the pack and the model list
+     */
+    public static BedrockPack build(final List<Blueprint> blueprints, final Predicate<BoneBlueprint> hidden) {
         PackWriter writer = new PackWriter();
         writer.json("render_controllers/hyperion.render_controllers.json", renderController());
         JsonArray models = new JsonArray();
         for (Blueprint blueprint : blueprints) {
-            models.add(model(writer, blueprint));
+            models.add(model(writer, blueprint, hidden));
         }
 
         // The version follows the contents, so clients that cached an older pack fetch this one.
@@ -65,9 +78,10 @@ public final class BedrockPackBuilder {
      *
      * @param writer the pack being written
      * @param blueprint the blueprint
+     * @param hidden tells which bones' own cubes to leave out
      * @return the model's entry in the list
      */
-    private static JsonObject model(final PackWriter writer, final Blueprint blueprint) {
+    private static JsonObject model(final PackWriter writer, final Blueprint blueprint, final Predicate<BoneBlueprint> hidden) {
         String slug = BedrockIds.slug(blueprint.key());
         List<String> names = new ArrayList<>(blueprint.animations());
         if (names.size() > MAX_ANIMATIONS) {
@@ -76,7 +90,7 @@ public final class BedrockPackBuilder {
 
         BedrockAtlas atlas = BedrockAtlas.of(blueprint.textures());
         writer.bytes("textures/hyperion/" + slug + ".png", atlas.png());
-        writer.json("models/entity/" + slug + ".geo.json", BedrockGeometry.of(blueprint, slug, atlas));
+        writer.json("models/entity/" + slug + ".geo.json", BedrockGeometry.of(blueprint, slug, atlas, hidden));
         writer.json("animations/" + slug + ".animation.json", BedrockAnimations.of(blueprint, slug, names));
         writer.json("animation_controllers/" + slug + ".animation_controllers.json", controllers(slug, names.size()));
         writer.json("entity/" + slug + ".entity.json", entity(slug, names.size()));

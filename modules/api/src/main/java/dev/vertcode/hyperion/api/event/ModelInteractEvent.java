@@ -1,10 +1,13 @@
 package dev.vertcode.hyperion.api.event;
 
+import java.util.Optional;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.model.Model;
 import dev.vertcode.hyperion.api.model.bone.Bone;
@@ -12,14 +15,15 @@ import dev.vertcode.hyperion.api.model.bone.Bone;
 /**
  * Fired when a player hits or clicks a model's hitbox.
  *
- * <p>Cancel it to stop the hit from reaching the entity carrying the model.
+ * <p>Fires on the region that owns the model. Cancel it to stop the hit or click from reaching
+ * the entity carrying the model, and Hyperion from acting on it, such as seating the player.
  */
 public final class ModelInteractEvent extends ModelEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
     private final Player player;
-    private final Bone bone;
+    private final @Nullable Bone bone;
     private final InteractionType type;
     private final EquipmentSlot hand;
     private boolean cancelled;
@@ -29,7 +33,7 @@ public final class ModelInteractEvent extends ModelEvent implements Cancellable 
      *
      * @param model the model that was touched
      * @param player the player who touched it
-     * @param bone the hitbox bone that was touched
+     * @param bone the hitbox bone that was touched, or null for the box around the whole model
      * @param type whether it was a hit or a click
      * @param hand the hand the player used
      */
@@ -37,7 +41,7 @@ public final class ModelInteractEvent extends ModelEvent implements Cancellable 
     public ModelInteractEvent(
             final Model model,
             final Player player,
-            final Bone bone,
+            final @Nullable Bone bone,
             final InteractionType type,
             final EquipmentSlot hand
     ) {
@@ -60,10 +64,10 @@ public final class ModelInteractEvent extends ModelEvent implements Cancellable 
     /**
      * Return the hitbox bone that was hit or clicked.
      *
-     * @return the bone
+     * @return the bone, or empty when the player touched the box around the whole model
      */
-    public Bone bone() {
-        return this.bone;
+    public Optional<Bone> bone() {
+        return Optional.ofNullable(this.bone);
     }
 
     /**

@@ -12,8 +12,12 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Unmodifiable;
 
 import dev.vertcode.hyperion.api.animation.Animator;
+import dev.vertcode.hyperion.api.model.behavior.BoneBehavior;
+import dev.vertcode.hyperion.api.model.behavior.builtin.SeatBehavior;
 import dev.vertcode.hyperion.api.model.bone.Bone;
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxBehavior;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.locator.Locator;
 import dev.vertcode.hyperion.api.model.view.PlayerView;
 import dev.vertcode.hyperion.api.model.view.Viewers;
@@ -262,6 +266,41 @@ public interface Model extends Appearance<Model> {
      * @return this model
      */
     Model autoAnimations(boolean enabled);
+
+    /**
+     * Return every behavior of a type on any bone, parents first. Handy for behaviors a model
+     * has several of:
+     *
+     * <pre>{@code
+     * model.behaviors(HeadBehavior.class).forEach(head -> head.target(lookAt));
+     * }</pre>
+     *
+     * @param type the behavior interface or class, such as {@code HeadBehavior.class}
+     * @param <B> the behavior type
+     * @return the behaviors, empty when no bone has one
+     */
+    <B extends BoneBehavior> @Unmodifiable List<B> behaviors(Class<B> type);
+
+    /**
+     * Return the model's seats, parents first. The first one steers when steering is on.
+     *
+     * @return the seats, empty when the model has none
+     */
+    @Unmodifiable List<SeatBehavior> seats();
+
+    /**
+     * Return the model's hitbox bones, parents first.
+     *
+     * @return the hitboxes, empty when the model has none
+     */
+    @Unmodifiable List<HitboxBehavior> hitboxes();
+
+    /**
+     * Return how players hit and click this model.
+     *
+     * @return the hitbox mode, chosen as the model spawned
+     */
+    HitboxMode hitboxMode();
 
     /**
      * Return whether this model has been removed.

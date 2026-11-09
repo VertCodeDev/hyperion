@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 
 import net.kyori.adventure.resource.ResourcePackInfo;
@@ -25,6 +26,7 @@ import org.bukkit.event.player.PlayerResourcePackStatusEvent;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.api.model.bone.BoneBlueprint;
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
 import dev.vertcode.hyperion.bedrock.BedrockPack;
 import dev.vertcode.hyperion.bedrock.BedrockPackBuilder;
@@ -72,6 +74,7 @@ public final class PackManager {
     private volatile @Nullable ResourcePack pack;
     private volatile @Nullable BedrockPack bedrock;
     private volatile boolean bedrockEnabled;
+    private volatile Predicate<BoneBlueprint> hiddenBones = bone -> false;
     private volatile Consumer<ResourcePack> builtListener = built -> {
     };
     private @Nullable PackServer server;
@@ -447,7 +450,7 @@ public final class PackManager {
     private ResourcePack build() {
         List<Blueprint> blueprints = this.registry.all();
         if (this.bedrockEnabled) {
-            this.bedrock = BedrockPackBuilder.build(blueprints);
+            this.bedrock = BedrockPackBuilder.build(blueprints, this.hiddenBones);
         }
 
         return PackBuilder.build(blueprints, this.settings, this.version, this.format);
@@ -460,6 +463,16 @@ public final class PackManager {
      */
     public void bedrock(final boolean enabled) {
         this.bedrockEnabled = enabled;
+    }
+
+    /**
+     * Leave some bones' cubes out of the Bedrock pack from the next build on: ghosts and
+     * hitboxes, which are never drawn.
+     *
+     * @param hidden tells which bones to leave out
+     */
+    public void hiddenBones(final Predicate<BoneBlueprint> hidden) {
+        this.hiddenBones = hidden;
     }
 
     /**

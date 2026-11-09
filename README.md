@@ -96,6 +96,7 @@ designed around that one goal:
 - [x] Resource pack generation
 - [x] Display entity rendering and tracking
 - [x] Animations
+- [x] Bone behaviors: heads, hitboxes, seats, name tags, hands
 - [ ] Timeline effects (particles, sounds, events)
 - [ ] Custom armor
 - [ ] Bedrock support

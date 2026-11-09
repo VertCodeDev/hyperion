@@ -24,6 +24,55 @@ models:
     # A choice per entity type that wins over "enabled", such as armor_stand: false.
     entities: {}
 
+# What bones do, picked by how their names start in Blockbench. Changes reach models spawned
+# after /hy reload.
+behaviors:
+  # The name starts that give a bone each behavior, ignoring case. Add the names another plugin
+  # uses to load its models as they are, such as h_ for head and p_ for seat.
+  prefixes:
+    # Turns with where the entity looks.
+    head: [head]
+    # A box players hit and click, sized by the bone's own cubes, which are not drawn.
+    hitbox: [hitbox]
+    # A spot a player can sit on, moving with the model.
+    seat: [seat]
+    # Shows the entity's name, following the bone.
+    nametag: [nametag]
+    # Shows what the entity holds in its main or off hand.
+    main-hand: [main_hand]
+    off-hand: [off_hand]
+    # Never drawn: for bones that only hold others, locators or logic.
+    ghost: [ghost]
+
+  head:
+    # How far a head turns left or right from the body, and up or down, in degrees.
+    max-yaw: 50
+    max-pitch: 40
+
+  hitboxes:
+    # How players hit and click models:
+    #   bones  A hitbox per hitbox bone, following the bone. A model without hitbox bones gets
+    #          one box around all of it.
+    #   model  One box around the whole model.
+    mode: bones
+    # Hits on a model on an entity hurt the entity, as if the player hit it.
+    forward-damage: true
+
+  seats:
+    # Right-clicking a model with a free seat sits the player in it. Sneak to get off.
+    click-to-ride: true
+    # The player in the first seat steers the entity carrying the model.
+    steering:
+      enabled: false
+      # walking moves like a horse and jumps; flying follows where the rider looks.
+      mode: walking
+      # Blocks per tick: 0.25 is a little faster than a walking player.
+      speed: 0.25
+      # How high a jump goes, in blocks per tick upwards.
+      jump: 0.5
+      # A choice per entity type that wins over "enabled", such as horse: true.
+      entities: {}
+
 # The resource pack that holds every model.
 pack:
   # How players get the pack:

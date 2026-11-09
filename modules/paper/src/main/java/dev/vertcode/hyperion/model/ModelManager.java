@@ -1,6 +1,7 @@
 package dev.vertcode.hyperion.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
     private final NamespacedKey carrierKey;
     private final Map<UUID, HyperionModel> models = new ConcurrentHashMap<>();
     private final Map<Integer, List<HyperionModel>> byEntity = new ConcurrentHashMap<>();
+    private final ModelInteractions interactions = new ModelInteractions();
     private volatile ModelSettings settings;
     private volatile PartItems items;
     private volatile String baseItem;
@@ -449,15 +451,70 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
      */
     int[] passengers(final Entity entity, final UUID viewer) {
         List<Entity> riders = entity.getPassengers();
-        int[] displays = this.displaysFor(entity.getEntityId(), viewer);
-        int[] all = new int[riders.size() + displays.length];
-        for (int i = 0; i < riders.size(); i++) {
-            all[i] = riders.get(i).getEntityId();
+        int[] ids = new int[riders.size()];
+        for (int i = 0; i < ids.length; i++) {
+            ids[i] = riders.get(i).getEntityId();
         }
 
-        System.arraycopy(displays, 0, all, riders.size(), displays.length);
+        return this.riders(entity.getEntityId(), ids, viewer);
+    }
 
-        return all;
+    /**
+     * Turn an entity's real passengers into what one player sees riding it. A player who sees a
+     * model on the entity gets the model's displays added, and the seats left out: those are
+     * placed at their bones instead, with whoever sits in them. Safe from any thread.
+     *
+     * @param entityId the entity's id
+     * @param riders the entity ids of its real passengers
+     * @param viewer the player's id
+     * @return the entity ids the player should see riding it
+     */
+    public int[] riders(final int entityId, final int[] riders, final UUID viewer) {
+        boolean seen = false;
+        for (HyperionModel model : this.on(entityId)) {
+            if (!model.isRemoved() && model.seenBy(viewer)) {
+                seen = true;
+                break;
+            }
+        }
+
+        if (!seen) {
+            return riders;
+        }
+
+        int[] displays = this.displaysFor(entityId, viewer);
+        int[] all = new int[riders.length + displays.length];
+        int at = 0;
+        for (int rider : riders) {
+            if (!this.interactions.isSeat(rider)) {
+                all[at++] = rider;
+            }
+        }
+
+        System.arraycopy(displays, 0, all, at, displays.length);
+
+        return Arrays.copyOf(all, at + displays.length);
+    }
+
+    /**
+     * Return what the packet listeners look up: hitboxes, seats and rider keys.
+     *
+     * @return the lookups
+     */
+    public ModelInteractions interactions() {
+        return this.interactions;
+    }
+
+    /**
+     * Run something on the thread that owns a model, from any thread.
+     *
+     * @param model the model
+     * @param task what to run
+     */
+    public void runOnOwner(final Model model, final Runnable task) {
+        if (model instanceof HyperionModel live) {
+            live.runOnOwner(task);
+        }
     }
 
     // Internals for models

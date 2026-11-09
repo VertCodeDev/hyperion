@@ -1,5 +1,6 @@
 package dev.vertcode.hyperion.listener;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -156,22 +157,20 @@ public final class BaseEntityListener implements PacketListener {
     }
 
     /**
-     * Add the model's displays to the riders of the entity carrying it.
+     * Add the model's displays to the riders of the entity carrying it, and leave out its seats,
+     * which are placed at their bones.
      *
      * @param event the packet
      * @param viewer who it goes to
      */
     private void passengers(final PacketSendEvent event, final UUID viewer) {
         WrapperPlayServerSetPassengers packet = new WrapperPlayServerSetPassengers(event);
-        int[] displays = this.models.displaysFor(packet.getEntityId(), viewer);
-        if (displays.length == 0) {
+        int[] riders = packet.getPassengers();
+        int[] all = this.models.riders(packet.getEntityId(), riders, viewer);
+        if (Arrays.equals(all, riders)) {
             return;
         }
 
-        int[] riders = packet.getPassengers();
-        int[] all = new int[riders.length + displays.length];
-        System.arraycopy(riders, 0, all, 0, riders.length);
-        System.arraycopy(displays, 0, all, riders.length, displays.length);
         packet.setPassengers(all);
         event.markForReEncode(true);
     }

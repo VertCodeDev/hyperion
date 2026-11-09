@@ -8,6 +8,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
+import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.view.ViewerPolicy;
 
 /**
@@ -167,4 +168,12 @@ public interface SpawnOptions {
      * @return these options
      */
     SpawnOptions autoAnimations(boolean enabled);
+
+    /**
+     * Choose how players hit and click this model; {@code config.yml} sets the default.
+     *
+     * @param mode a hitbox per hitbox bone, or one box around the whole model
+     * @return these options
+     */
+    SpawnOptions hitboxMode(HitboxMode mode);
 }
