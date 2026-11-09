@@ -17,6 +17,7 @@ dependencyResolutionManagement {
         maven("https://repo.codemc.io/repository/maven-releases/")
         maven("https://repo.xenondevs.xyz/releases/")
         maven("https://repo.opencollab.dev/main/")
+        maven("https://repo.extendedclip.com/releases/")
     }
 }
 

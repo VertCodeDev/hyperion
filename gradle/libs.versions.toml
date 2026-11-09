@@ -19,6 +19,8 @@ invui2-mc262 = "2.3.2"
 # The Geyser api the Bedrock extension compiles against; its custom entities need 2.11 or newer.
 geyser = "2.12.1-SNAPSHOT"
 gson = "2.13.2"
+# Optional: when the server has PlaceholderAPI, effect texts fill in its placeholders.
+placeholderapi = "2.11.6"
 lombok = "1.18.46"
 annotations = "26.0.2"
 jspecify = "1.0.0"
@@ -34,6 +36,7 @@ shadow = "9.6.1"
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
 paper-api-newest = { module = "io.papermc.paper:paper-api", version.ref = "paper-newest" }
 packetevents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetevents" }
+placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
 cloud-annotations = { module = "org.incendo:cloud-annotations", version.ref = "cloud" }
 cloud-paper = { module = "org.incendo:cloud-paper", version.ref = "cloud-minecraft" }
 cloud-minecraft-extras = { module = "org.incendo:cloud-minecraft-extras", version.ref = "cloud-minecraft" }

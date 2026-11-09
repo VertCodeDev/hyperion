@@ -25,7 +25,9 @@
 #   offset: [right, up, forward]  blocks from there
 #
 # Who sees it: viewers: model (who sees the model, the default), everyone, or nearby:<radius>.
-# Parameters, written %name%, can be filled in by whoever plays the effect.
+# Parameters, written %name%, can be filled in by whoever plays the effect. With PlaceholderAPI,
+# titles, action bars, messages and commands also fill in its placeholders for each viewer, and
+# text props the server's own, such as %server_online%.
 
 level_up:
   duration: 40

@@ -22,6 +22,7 @@ dependencies {
     runtimeOnly(project(":menu-invui2"))
 
     compileOnly(libs.packetevents.spigot)
+    compileOnly(libs.placeholderapi)
     compileOnly(libs.cloud.paper)
     compileOnly(libs.cloud.annotations)
     compileOnly(libs.cloud.minecraft.extras) {

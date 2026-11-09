@@ -21,7 +21,7 @@ import dev.vertcode.hyperion.api.effect.EffectFrame;
  * console commands and the sky's time.
  *
  * <p>Every text is MiniMessage, with the effect's {@code %parameters%} already filled in, then
- * {@code %player%} for each viewer.
+ * {@code %player%} and, when the server has PlaceholderAPI, its placeholders, per viewer.
  */
 final class ScreenActors {
 
@@ -34,7 +34,7 @@ final class ScreenActors {
     }
 
     /**
-     * Fill in a viewer's name and read MiniMessage.
+     * Fill in a viewer's name and placeholders, and read MiniMessage.
      *
      * @param text the text
      * @param viewer the viewer
@@ -45,14 +45,14 @@ final class ScreenActors {
     }
 
     /**
-     * Fill in a viewer's name.
+     * Fill in a viewer's name and, with PlaceholderAPI, their placeholders.
      *
      * @param text the text
      * @param viewer the viewer
      * @return the filled text
      */
     static String fill(final String text, final Player viewer) {
-        return text.replace("%player%", viewer.getName());
+        return Placeholders.apply(viewer, text.replace("%player%", viewer.getName()));
     }
 
     /**

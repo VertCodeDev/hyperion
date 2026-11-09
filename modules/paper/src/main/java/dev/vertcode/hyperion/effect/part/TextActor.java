@@ -14,7 +14,7 @@ import dev.vertcode.hyperion.render.PropData;
 /**
  * A text prop.
  *
- * <p>Values: {@code text} in MiniMessage, {@code background} as {@code #AARRGGBB},
+ * <p>Values: {@code text} in MiniMessage, with the server's PlaceholderAPI placeholders, {@code background} as {@code #AARRGGBB},
  * {@code shadow}, {@code see-through}, {@code line-width}, {@code opacity} (0 to 255) and
  * {@code alignment} ({@code left}, {@code center}, {@code right}).
  */
@@ -52,13 +52,14 @@ final class TextActor extends DisplayActor {
     }
 
     /**
-     * Return the text.
+     * Return the text, with the server's PlaceholderAPI placeholders filled in. Every viewer sees
+     * the same prop, so placeholders of one player stay as written.
      *
      * @param frame the part's values
      * @return the text
      */
     private static String text(final EffectFrame frame) {
-        return frame.string("text", "");
+        return Placeholders.apply(null, frame.string("text", ""));
     }
 
     /**

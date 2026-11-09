@@ -11,6 +11,7 @@ the [menu modules](../menu/README.md); its libraries are downloaded by the serve
 | [Incendo Cloud](https://github.com/Incendo/cloud) | Downloaded on first start | The `/hyperion` commands, registered through Paper's Brigadier api |
 | [InvUI](https://github.com/NichtStudioCode/InvUI) | Downloaded on first start, the release that fits the server | The menus |
 | [PacketEvents](https://github.com/retrooper/packetevents) | Separate plugin, required | Sending model packets, and editing the server's own packets to hide parts of an entity or add seats |
+| [PlaceholderAPI](https://github.com/PlaceholderAPI/PlaceholderAPI) | Separate plugin, optional | Filling its placeholders into effect texts |
 
 `HyperionLoader` runs before the plugin and has Paper download Cloud and InvUI into its
 `libraries` folder, so the first start needs internet access and later starts do not. Paper keeps
@@ -220,6 +221,11 @@ with its script. An animation in a player's view plays its effects to that playe
 **Inside a model.** A model may carry effects of its own in a `hyperion_effects` field of its
 `.bbmodel`, in the same form as the YAML, as `<model key>/<name>`. Blockbench keeps the field
 when it saves, and it is where a Blockbench plugin for building scenes will write.
+
+**Placeholders.** With PlaceholderAPI on the server, effect texts fill in its placeholders after
+the effect's own `%parameters%`. Titles, action bars, messages and commands fill them in for each
+viewer, with `%player%` too. Text props are one entity every viewer shares, so they fill in the
+server's placeholders, such as `%server_online%`, and keep up as those change.
 
 **Camera.** A camera only takes the view of players a play names (`EffectOptions#camera`, or
 `/hy effect play <effect> --camera` for yourself), never everyone who sees the effect. The player
