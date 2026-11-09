@@ -238,25 +238,25 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
      */
     private static @Nullable Placement place(final EffectAnchor anchor) {
         return switch (anchor) {
-            case EffectAnchor.AtLocation(Location at) -> new Placement(at, yaw(at.getYaw()), false);
+            case EffectAnchor.AtLocation(Location at) -> new Placement(at, yaw(at.getYaw()));
             case EffectAnchor.OnEntity(Entity entity) -> {
                 if (!entity.isValid()) {
                     yield null;
                 }
 
                 float facing = entity instanceof LivingEntity living ? living.getBodyYaw() : entity.getYaw();
-                yield new Placement(entity.getLocation(), yaw(facing), false);
+                yield new Placement(entity.getLocation(), yaw(facing));
             }
             case EffectAnchor.OnModel(Model model) -> model.isRemoved()
                     ? null
-                    : new Placement(model.location(), yaw(model.rotation().yaw()), false);
+                    : new Placement(model.location(), yaw(model.rotation().yaw()));
             case EffectAnchor.OnBone(Model model, String name) -> {
                 Bone bone = model.isRemoved() ? null : model.bone(name).orElse(null);
-                yield bone == null ? null : new Placement(bone.location(), bone.rotation(), true);
+                yield bone == null ? null : new Placement(bone.location(), fromBone(bone.rotation()));
             }
             case EffectAnchor.OnLocator(Model model, String name) -> {
                 Locator locator = model.isRemoved() ? null : model.locator(name).orElse(null);
-                yield locator == null ? null : new Placement(locator.location(), locator.rotation(), true);
+                yield locator == null ? null : new Placement(locator.location(), fromBone(locator.rotation()));
             }
         };
     }
@@ -318,7 +318,7 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
             EffectActor actor = this.actors[i];
             Location there = actor == null ? null : actor.location();
             if (parts.get(i).name().equals(at) && there != null && anchored != null) {
-                return new Placement(there, anchored.rotation(), anchored.bone());
+                return new Placement(there, anchored.rotation());
             }
         }
 
@@ -346,7 +346,14 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     public Vector3f turn(final EffectFrame frame, final float right, final float up, final float forward) {
         Placement placement = this.placementOf(frame);
 
-        return placement == null ? new Vector3f(right, up, forward) : placement.turn(right, up, forward);
+        return placement == null ? new Vector3f(-right, up, forward) : placement.turn(right, up, forward);
+    }
+
+    @Override
+    public Quaternionf rotation(final EffectFrame frame) {
+        Placement placement = this.placementOf(frame);
+
+        return placement == null ? new Quaternionf() : new Quaternionf(placement.rotation());
     }
 
     // Audience
@@ -491,17 +498,26 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     }
 
     /**
+     * Turn a bone's or locator's rotation into the one offsets turn with. Bones face north as in
+     * Blockbench, so a half turn first makes their forward the same as everything else's.
+     *
+     * @param rotation the bone's rotation in the world
+     * @return the rotation
+     */
+    private static Quaternionf fromBone(final Quaternionfc rotation) {
+        return new Quaternionf(rotation).rotateY((float) Math.PI);
+    }
+
+    /**
      * Where something is and how offsets from it turn.
      *
      * @param origin the spot
-     * @param rotation its rotation in the world
-     * @param bone true for a bone or locator, whose space faces north as in Blockbench
+     * @param rotation the rotation from a space where X is left, Y up and Z forward into the world
      */
-    private record Placement(Location origin, Quaternionfc rotation, boolean bone) {
+    private record Placement(Location origin, Quaternionfc rotation) {
 
         /**
-         * Turn an offset of right, up and forward into the world. Facing south, right is west;
-         * a bone faces north, so its right is east and forward is negative Z before it turns.
+         * Turn an offset of right, up and forward into the world.
          *
          * @param right blocks to the right
          * @param up blocks up
@@ -509,9 +525,7 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
          * @return the offset in the world
          */
         Vector3f turn(final float right, final float up, final float forward) {
-            Vector3f local = this.bone ? new Vector3f(right, up, -forward) : new Vector3f(-right, up, forward);
-
-            return this.rotation.transform(local);
+            return this.rotation.transform(new Vector3f(-right, up, forward));
         }
     }
 }

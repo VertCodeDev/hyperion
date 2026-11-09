@@ -11,8 +11,8 @@ import dev.vertcode.hyperion.api.effect.EffectPart;
 import dev.vertcode.hyperion.api.effect.EffectPartType;
 
 /**
- * The part types Hyperion ships: {@code particle}, {@code sound}, {@code burst} and
- * {@code event}.
+ * The part types Hyperion ships: emitters, sounds, bursts and events; and text, item, block and
+ * model props.
  */
 public final class BuiltinParts {
 
@@ -22,14 +22,19 @@ public final class BuiltinParts {
     /**
      * Return every built-in part type.
      *
+     * @param services what the types need from the plugin
      * @return the types
      */
-    public static List<EffectPartType> all() {
+    public static List<EffectPartType> all(final PartServices services) {
         return List.of(
                 type(EffectPart.PARTICLE, true, ParticleActor::new),
                 type(EffectPart.SOUND, false, SoundActor::new),
                 type(EffectPart.BURST, false, BurstActor::new),
-                type(EffectPart.EVENT, false, EventActor::new)
+                type(EffectPart.EVENT, false, EventActor::new),
+                type(EffectPart.TEXT, true, TextActor::new),
+                type(EffectPart.ITEM, true, ItemActor::new),
+                type(EffectPart.BLOCK, true, BlockActor::new),
+                type(EffectPart.MODEL, true, context -> new ModelPropActor(context, services))
         );
     }
 

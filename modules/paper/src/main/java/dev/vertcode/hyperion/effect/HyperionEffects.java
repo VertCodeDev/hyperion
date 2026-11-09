@@ -52,6 +52,7 @@ import dev.vertcode.hyperion.blueprint.LoadReport;
 import dev.vertcode.hyperion.blueprint.metadata.JsonMetadata;
 import dev.vertcode.hyperion.config.EffectSettings;
 import dev.vertcode.hyperion.effect.part.BuiltinParts;
+import dev.vertcode.hyperion.effect.part.PartServices;
 import dev.vertcode.hyperion.effect.part.ParticleData;
 import dev.vertcode.hyperion.model.ModelEffects;
 import dev.vertcode.hyperion.model.ModelManager;
@@ -120,7 +121,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         this.models = models;
         this.blueprints = blueprints;
         this.settings = settings;
-        for (EffectPartType type : BuiltinParts.all()) {
+        for (EffectPartType type : BuiltinParts.all(new PartServices(plugin, blueprints, models))) {
             this.registerPartType(plugin, type);
         }
     }

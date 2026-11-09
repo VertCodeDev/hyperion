@@ -6,6 +6,8 @@
 #   sound     Plays a sound at each keyframe.
 #   burst     Sends a burst of particles at each keyframe.
 #   event     Fires an event plugins listen to at each keyframe, with the keyframe's "name".
+#   text, item, block  A prop in the air: rotation, scale and offset move between keyframes.
+#   model     A Hyperion model as a prop, playing its "animation".
 #
 # Keyframes sit at ticks. Numbers and [x, y, z] values move smoothly from one keyframe to the
 # next, eased by the later one's "easing": linear, ease-in, ease-out, ease-in-out, ease-in-back,

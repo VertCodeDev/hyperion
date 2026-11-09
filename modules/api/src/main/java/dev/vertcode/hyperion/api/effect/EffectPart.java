@@ -46,6 +46,26 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
     public static final Key EVENT = Key.key("hyperion", "event");
 
     /**
+     * A floating line of text, with MiniMessage and {@code %parameters%}.
+     */
+    public static final Key TEXT = Key.key("hyperion", "text");
+
+    /**
+     * An item shown in the air.
+     */
+    public static final Key ITEM = Key.key("hyperion", "item");
+
+    /**
+     * A block shown in the air.
+     */
+    public static final Key BLOCK = Key.key("hyperion", "block");
+
+    /**
+     * A Hyperion model, playing one of its animations, while the part shows.
+     */
+    public static final Key MODEL = Key.key("hyperion", "model");
+
+    /**
      * Sort the keyframes by tick and copy them.
      */
     public EffectPart {
@@ -92,6 +112,46 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
      */
     public static Builder event(final String name) {
         return of(name, EVENT);
+    }
+
+    /**
+     * Start building a part of type {@code text}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder text(final String name) {
+        return of(name, TEXT);
+    }
+
+    /**
+     * Start building a part of type {@code item}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder item(final String name) {
+        return of(name, ITEM);
+    }
+
+    /**
+     * Start building a part of type {@code block}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder block(final String name) {
+        return of(name, BLOCK);
+    }
+
+    /**
+     * Start building a part of type {@code model}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder model(final String name) {
+        return of(name, MODEL);
     }
 
     /**

@@ -42,7 +42,7 @@ not a new Hyperion release. Hyperion does not start without it.
 | `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
 | `bedrock` | Telling Bedrock players apart, the Bedrock pack, and the link the Geyser extension follows |
 | `effect` | `HyperionEffects` (loading, finding and playing effects), `EffectLoader` (YAML and model JSON into effects), `CompiledEffect` (an effect's steps, built once) and `EffectShow` (one play) |
-| `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts and events |
+| `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts, events, and text, item, block and model props |
 
 ## Models
 
@@ -200,6 +200,8 @@ add folders of their own in their own namespace, build effects in code, and add 
 | `sound` | A sound at each keyframe, with volume, pitch and category |
 | `burst` | A burst of particles at each keyframe |
 | `event` | `EffectKeyframeEvent` at each keyframe, with the keyframe's name |
+| `text`, `item`, `block` | A prop: a display only the effect's viewers see, its rotation, scale and offset eased between keyframes |
+| `model` | A Hyperion model as a prop, seen only by the effect's viewers, playing one of its animations |
 
 An effect follows what it is played on: a model, a bone, a Blockbench locator, an entity or a
 spot. A part sits at that anchor, a bone or locator of its model, or another part, with an offset

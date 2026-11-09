@@ -5,6 +5,7 @@ import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
@@ -40,6 +41,15 @@ public interface EffectContext {
      * @return the offset in the world, as x, y and z
      */
     Vector3f turn(EffectFrame frame, float right, float up, float forward);
+
+    /**
+     * Return how a frame's part is turned in the world: forward is where its {@code at} faces.
+     * A prop's own {@code rotation} goes on top of this.
+     *
+     * @param frame the part's values now, for its {@code at}
+     * @return the rotation, from a space where X is left, Y up and Z forward
+     */
+    Quaternionf rotation(EffectFrame frame);
 
     /**
      * Return who sees and hears the effect this tick.

@@ -198,6 +198,38 @@ public record EffectFrame(Map<String, Object> values) {
         }
 
         /**
+         * Turn a prop, in degrees around X, Y and Z, on top of where it is anchored.
+         *
+         * @param x degrees around X
+         * @param y degrees around Y
+         * @param z degrees around Z
+         * @return this builder
+         */
+        public Builder rotation(final float x, final float y, final float z) {
+            return this.set("rotation", new Vector3f(x, y, z));
+        }
+
+        /**
+         * Scale a prop the same on every axis.
+         *
+         * @param scale the scale
+         * @return this builder
+         */
+        public Builder scale(final float scale) {
+            return this.set("scale", scale);
+        }
+
+        /**
+         * Set the text of a text prop, title, action bar or message, in MiniMessage.
+         *
+         * @param text the text
+         * @return this builder
+         */
+        public Builder text(final String text) {
+            return this.set("text", text);
+        }
+
+        /**
          * Set the radius of a particle shape.
          *
          * @param radius the radius in blocks
