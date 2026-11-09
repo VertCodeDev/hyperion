@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EffectLoaderTest {
 
-    private static final Set<Key> TYPES = Set.of(EffectPart.PARTICLE, EffectPart.SOUND, EffectPart.BURST, EffectPart.EVENT);
+    private static final Set<Key> TYPES = Set.of(EffectPart.PARTICLE, EffectPart.SOUND, EffectPart.BURST, EffectPart.EVENT, EffectPart.COMMAND);
     private static final Key KEY = Key.key("hyperion", "breath");
 
     @Test
@@ -101,11 +101,40 @@ class EffectLoaderTest {
         assertTrue(report.hasErrors());
     }
 
+    @Test
+    void refusesCommandsInsideModels() throws InvalidConfigurationException {
+        String yaml = """
+                breath:
+                  duration: 10
+                  parts:
+                    roar:
+                      type: sound
+                    reward:
+                      type: command
+                      keyframes:
+                        0: { command: "give %player% diamond" }
+                """;
+        LoadReport fromFile = new LoadReport("test.yml");
+        LoadReport fromModel = new LoadReport("model");
+
+        assertEquals(2, load(yaml, fromFile, true).orElseThrow().parts().size());
+        assertEquals(1, load(yaml, fromModel, false).orElseThrow().parts().size());
+        assertEquals(1, fromModel.count(IssueSeverity.WARNING));
+    }
+
     private static Optional<Effect> load(final String yaml, final LoadReport report) throws InvalidConfigurationException {
+        return load(yaml, report, true);
+    }
+
+    private static Optional<Effect> load(
+            final String yaml,
+            final LoadReport report,
+            final boolean commands
+    ) throws InvalidConfigurationException {
         YamlConfiguration file = new YamlConfiguration();
         file.loadFromString(yaml);
         Map<String, Object> tree = EffectTrees.of(file);
 
-        return EffectLoader.effect(KEY, Objects.requireNonNull(tree.get("breath")), report, TYPES::contains);
+        return EffectLoader.effect(KEY, Objects.requireNonNull(tree.get("breath")), report, TYPES::contains, commands);
     }
 }

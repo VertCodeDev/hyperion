@@ -57,6 +57,7 @@ public final class EffectLoader {
     private static final String BAD_VALUE = "has '%s: %s', which is not text, a number, a switch or [x, y, z]";
     private static final String BAD_PARTICLE = "uses particle '%s', which this server does not have";
     private static final String UNSUPPORTED_PARTICLE = "uses particle '%s', which needs data effects cannot give";
+    private static final String NO_COMMANDS = "runs commands, which only effects in the server's own files may; it is skipped";
 
     private EffectLoader() {
     }
@@ -68,13 +69,15 @@ public final class EffectLoader {
      * @param tree the effect's section
      * @param report where problems go
      * @param knownType tells whether a part type is registered
+     * @param commands whether command parts may run, false for effects inside models
      * @return the effect, or empty when it has an error
      */
     public static Optional<Effect> effect(
             final Key key,
             final Object tree,
             final LoadReport report,
-            final Predicate<Key> knownType
+            final Predicate<Key> knownType,
+            final boolean commands
     ) {
         String where = "effect " + key.asString();
         if (!(tree instanceof Map<?, ?> section)) {
@@ -98,7 +101,7 @@ public final class EffectLoader {
         if (section.get("parts") instanceof Map<?, ?> partTrees) {
             for (Map.Entry<?, ?> entry : partTrees.entrySet()) {
                 String name = String.valueOf(entry.getKey());
-                part(name, entry.getValue(), where + ", part " + name, report, knownType).ifPresent(parts::add);
+                part(name, entry.getValue(), where + ", part " + name, report, knownType, commands).ifPresent(parts::add);
             }
         }
 
@@ -159,6 +162,7 @@ public final class EffectLoader {
      * @param where the part, for warnings
      * @param report where problems go
      * @param knownType tells whether a part type is registered
+     * @param commands whether command parts may run
      * @return the part, or empty when it cannot be used
      */
     private static Optional<EffectPart> part(
@@ -166,7 +170,8 @@ public final class EffectLoader {
             final Object tree,
             final String where,
             final LoadReport report,
-            final Predicate<Key> knownType
+            final Predicate<Key> knownType,
+            final boolean commands
     ) {
         if (!(tree instanceof Map<?, ?> section)) {
             report.warn(where, NOT_A_SECTION);
@@ -184,6 +189,11 @@ public final class EffectLoader {
 
         if (!knownType.test(type)) {
             report.warn(where, String.format(UNKNOWN_TYPE, type.asString()));
+            return Optional.empty();
+        }
+
+        if (!commands && type.equals(EffectPart.COMMAND)) {
+            report.warn(where, NO_COMMANDS);
             return Optional.empty();
         }
 

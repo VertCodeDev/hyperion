@@ -8,6 +8,9 @@
 #   event     Fires an event plugins listen to at each keyframe, with the keyframe's "name".
 #   text, item, block  A prop in the air: rotation, scale and offset move between keyframes.
 #   model     A Hyperion model as a prop, playing its "animation".
+#   title, actionbar, message  Text on each viewer's screen, in MiniMessage, at each keyframe.
+#   command   A console command at each keyframe, %player% for each viewer. Never in models.
+#   time      Each viewer's own sky time; put back when the effect ends.
 #
 # Keyframes sit at ticks. Numbers and [x, y, z] values move smoothly from one keyframe to the
 # next, eased by the later one's "easing": linear, ease-in, ease-out, ease-in-out, ease-in-back,

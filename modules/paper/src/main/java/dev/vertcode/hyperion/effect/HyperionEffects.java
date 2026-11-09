@@ -222,7 +222,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
                 continue;
             }
 
-            Optional<Effect> effect = EffectLoader.effect(key, entry.getValue(), report, this.parts::containsKey);
+            Optional<Effect> effect = EffectLoader.effect(key, entry.getValue(), report, this.parts::containsKey, true);
             if (effect.isPresent()) {
                 this.effects.put(key, new Registered(folder.owner(), effect.get(), this.compile(effect.get()), folder.path()));
                 count++;
@@ -373,7 +373,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
                 Key key = key(model.namespace(), model.value() + "/" + entry.getKey(), report);
                 Optional<Effect> effect = key == null
                         ? Optional.empty()
-                        : EffectLoader.effect(key, entry.getValue(), report, this.parts::containsKey);
+                        : EffectLoader.effect(key, entry.getValue(), report, this.parts::containsKey, false);
                 effect.ifPresent(loaded -> found.put(
                         entry.getKey().toLowerCase(Locale.ROOT),
                         new Registered(this.plugin, loaded, this.compile(loaded), null)

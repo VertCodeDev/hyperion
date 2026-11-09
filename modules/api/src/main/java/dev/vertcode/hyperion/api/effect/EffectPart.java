@@ -66,6 +66,31 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
     public static final Key MODEL = Key.key("hyperion", "model");
 
     /**
+     * A title and subtitle at each keyframe.
+     */
+    public static final Key TITLE = Key.key("hyperion", "title");
+
+    /**
+     * An action bar line at each keyframe.
+     */
+    public static final Key ACTIONBAR = Key.key("hyperion", "actionbar");
+
+    /**
+     * A chat message at each keyframe.
+     */
+    public static final Key MESSAGE = Key.key("hyperion", "message");
+
+    /**
+     * A console command at each keyframe, once per viewer with {@code %player%}. Never from a model's own effects.
+     */
+    public static final Key COMMAND = Key.key("hyperion", "command");
+
+    /**
+     * The viewers' own sky time, put back when the effect ends.
+     */
+    public static final Key TIME = Key.key("hyperion", "time");
+
+    /**
      * Sort the keyframes by tick and copy them.
      */
     public EffectPart {
@@ -152,6 +177,56 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
      */
     public static Builder model(final String name) {
         return of(name, MODEL);
+    }
+
+    /**
+     * Start building a part of type {@code title}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder title(final String name) {
+        return of(name, TITLE);
+    }
+
+    /**
+     * Start building a part of type {@code actionbar}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder actionbar(final String name) {
+        return of(name, ACTIONBAR);
+    }
+
+    /**
+     * Start building a part of type {@code message}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder message(final String name) {
+        return of(name, MESSAGE);
+    }
+
+    /**
+     * Start building a part of type {@code command}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder command(final String name) {
+        return of(name, COMMAND);
+    }
+
+    /**
+     * Start building a part of type {@code time}.
+     *
+     * @param name the part's name
+     * @return the builder
+     */
+    public static Builder time(final String name) {
+        return of(name, TIME);
     }
 
     /**
