@@ -213,6 +213,16 @@ class BbmodelReaderTest {
     }
 
     @Test
+    void tellsFilesFromBeforeBlockbench5ByTheirVersion() throws IOException {
+        ModelData legacy = Fixtures.read("legacy_layout", new LoadReport("legacy_layout.bbmodel"));
+
+        assertEquals("5.0", this.data.formatVersion());
+        assertFalse(this.data.invertedAnimations());
+        assertEquals("4.10", legacy.formatVersion());
+        assertTrue(legacy.invertedAnimations());
+    }
+
+    @Test
     void refusesBrokenJson() {
         BbmodelFormat format = new BbmodelFormat();
         BytesSource broken = new BytesSource("broken.bbmodel", "{\"elements\": [".getBytes(StandardCharsets.UTF_8));

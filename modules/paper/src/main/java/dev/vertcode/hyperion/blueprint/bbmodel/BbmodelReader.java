@@ -162,6 +162,7 @@ public final class BbmodelReader {
         return new ModelData(
                 JsonFields.string(this.json, "name", ""),
                 format,
+                JsonFields.string(meta, "format_version", ""),
                 resolutionWidth,
                 resolutionHeight,
                 this.groups,

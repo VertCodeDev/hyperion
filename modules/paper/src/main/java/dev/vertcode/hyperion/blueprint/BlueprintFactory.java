@@ -85,7 +85,13 @@ final class BlueprintFactory {
         Map<String, Animation> animations = factory.animations();
         Map<String, BakedAnimation> baked = new LinkedHashMap<>();
         for (Map.Entry<String, Animation> entry : animations.entrySet()) {
-            baked.put(entry.getKey(), AnimationBaker.bake(entry.getKey(), entry.getValue(), factory.bonesByGroup, report));
+            baked.put(entry.getKey(), AnimationBaker.bake(
+                    entry.getKey(),
+                    entry.getValue(),
+                    factory.bonesByGroup,
+                    data.invertedAnimations(),
+                    report
+            ));
         }
 
         return new Blueprint(

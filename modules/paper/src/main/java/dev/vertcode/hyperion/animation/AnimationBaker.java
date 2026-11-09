@@ -28,9 +28,10 @@ import dev.vertcode.hyperion.blueprint.data.KeyframePoint;
 /**
  * Bake Blockbench animations into a sample per tick for each bone.
  *
- * <p>Blockbench stores an animation's offsets in pixels with X mirrored, and its angles with X
- * and Y mirrored, against its own group space; baking turns both into the bone's space, in
- * blocks and degrees, so playing only reads numbers. Molang a keyframe holds is worked out at
+ * <p>Blockbench 5 stores an animation's offsets in pixels and its angles in degrees, in the
+ * bone's own space, as the editor shows them. Files saved before it have offsets with X
+ * inverted and angles with X and Y inverted, which baking turns back the way Blockbench does when
+ * it opens them. Baking also turns pixels into blocks, so playing only reads numbers. Molang a keyframe holds is worked out at
  * every tick; what Hyperion cannot read is a warning and reads as 0.
  */
 public final class AnimationBaker {
@@ -47,6 +48,7 @@ public final class AnimationBaker {
     private static final String UNREADABLE = "has Molang Hyperion cannot read, so it reads as 0: %s";
 
     private final String name;
+    private final boolean inverted;
     private final LoadReport report;
     private final Map<String, MolangExpression> compiled = new HashMap<>();
     private final MolangContext context;
@@ -55,10 +57,12 @@ public final class AnimationBaker {
      * Prepare to bake one animation.
      *
      * @param name the animation's unique name
+     * @param inverted whether the file stores animations the way Blockbench did before 5.0
      * @param report where problems are noted
      */
-    private AnimationBaker(final String name, final LoadReport report) {
+    private AnimationBaker(final String name, final boolean inverted, final LoadReport report) {
         this.name = name;
+        this.inverted = inverted;
         this.report = report;
         this.context = new MolangContext(new Random(name.hashCode()));
     }
@@ -69,6 +73,8 @@ public final class AnimationBaker {
      * @param name the animation's unique name in the blueprint
      * @param animation the animation as read
      * @param bones the bone names by the id of the group Blockbench animates
+     * @param inverted whether the file stores animations the way Blockbench did before 5.0, see
+     *     {@link dev.vertcode.hyperion.blueprint.data.ModelData#invertedAnimations()}
      * @param report where problems are noted
      * @return the baked animation
      */
@@ -76,9 +82,10 @@ public final class AnimationBaker {
             final String name,
             final Animation animation,
             final Map<String, String> bones,
+            final boolean inverted,
             final LoadReport report
     ) {
-        return new AnimationBaker(name, report).bake(animation, bones);
+        return new AnimationBaker(name, inverted, report).bake(animation, bones);
     }
 
     private BakedAnimation bake(final Animation animation, final Map<String, String> bones) {
@@ -210,30 +217,32 @@ public final class AnimationBaker {
             float seconds = (float) tick / TICKS_PER_SECOND;
             this.context.animTime(seconds);
             curve.value(seconds, this.context, samples, tick * 3);
-            convert(channel, samples, tick * 3);
+            convert(channel, samples, tick * 3, this.inverted);
         }
 
         return samples;
     }
 
     /**
-     * Turn Blockbench's values into the bone's space: offsets from pixels to blocks with X
-     * mirrored, angles with X and Y mirrored.
+     * Turn Blockbench's values into the bone's space: offsets from pixels to blocks, and for a
+     * file from before Blockbench 5, offsets with X and angles with X and Y turned back.
      *
      * @param channel the channel
      * @param samples the samples
      * @param at where the three values start
+     * @param inverted whether the file stores animations the way Blockbench did before 5.0
      */
-    static void convert(final KeyframeChannel channel, final float[] samples, final int at) {
+    static void convert(final KeyframeChannel channel, final float[] samples, final int at, final boolean inverted) {
+        float flip = inverted ? -1f : 1f;
         switch (channel) {
             case POSITION -> {
-                samples[at] = -samples[at] / PIXELS_PER_BLOCK;
+                samples[at] = flip * samples[at] / PIXELS_PER_BLOCK;
                 samples[at + 1] = samples[at + 1] / PIXELS_PER_BLOCK;
                 samples[at + 2] = samples[at + 2] / PIXELS_PER_BLOCK;
             }
             case ROTATION -> {
-                samples[at] = -samples[at];
-                samples[at + 1] = -samples[at + 1];
+                samples[at] = flip * samples[at];
+                samples[at + 1] = flip * samples[at + 1];
             }
             default -> {
                 // Scale is the same in both spaces.
