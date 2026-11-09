@@ -90,7 +90,7 @@ designed around that one goal:
 # 🗺️ Roadmap
 
 - [x] Repository, build and license
-- [ ] Planning and API design
+- [x] Planning and API design
 - [x] Plugin bootstrap and the `/hyperion` command
 - [x] Blockbench model loading
 - [x] Resource pack generation
@@ -99,7 +99,7 @@ designed around that one goal:
 - [x] Bone behaviors: heads, hitboxes, seats, name tags, hands
 - [x] Timeline effects (particles, sounds, events)
 - [ ] Custom armor
-- [ ] Bedrock support
+- [x] Bedrock support
 - [ ] Public API release
 
 # 🖥️ Platforms
