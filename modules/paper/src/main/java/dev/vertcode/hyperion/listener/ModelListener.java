@@ -1,22 +1,32 @@
 package dev.vertcode.hyperion.listener;
 
+import java.util.List;
+
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import io.papermc.paper.event.player.PlayerTrackEntityEvent;
 import io.papermc.paper.event.player.PlayerUntrackEntityEvent;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.plugin.Plugin;
 
+import dev.vertcode.hyperion.api.model.Model;
 import dev.vertcode.hyperion.api.model.RemovalReason;
 import dev.vertcode.hyperion.behavior.HyperionBehaviorRegistry;
+import dev.vertcode.hyperion.command.HyperionPermissions;
 import dev.vertcode.hyperion.model.HyperionModelRegistry;
 import dev.vertcode.hyperion.model.ModelManager;
+import dev.vertcode.hyperion.ui.Menus;
+import dev.vertcode.hyperion.ui.ModelMenu;
 
 /**
  * Keep live models in step with the world: who tracks the entity carrying one, entities that
@@ -30,6 +40,8 @@ public final class ModelListener implements Listener {
     private final ModelManager models;
     private final HyperionModelRegistry registry;
     private final HyperionBehaviorRegistry behaviors;
+    private final Plugin plugin;
+    private final Menus menus;
 
     /**
      * Create the listener.
@@ -37,15 +49,44 @@ public final class ModelListener implements Listener {
      * @param models the live models
      * @param registry the blueprints, for dropping a disabled plugin's models
      * @param behaviors the behavior types, for dropping a disabled plugin's types
+     * @param plugin the plugin, which the menus schedule with
+     * @param menus opens a model's menu
      */
     public ModelListener(
             final ModelManager models,
             final HyperionModelRegistry registry,
-            final HyperionBehaviorRegistry behaviors
+            final HyperionBehaviorRegistry behaviors,
+            final Plugin plugin,
+            final Menus menus
     ) {
         this.models = models;
         this.registry = registry;
         this.behaviors = behaviors;
+        this.plugin = plugin;
+        this.menus = menus;
+    }
+
+    /**
+     * Open a model's menu when a player with the menu permission sneaks and right-clicks the
+     * entity carrying it. Fires on the thread that owns the player, which the menu needs.
+     *
+     * @param event the event
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onInteract(final PlayerInteractEntityEvent event) {
+        Player player = event.getPlayer();
+        boolean wanted = event.getHand() == EquipmentSlot.HAND && player.isSneaking();
+        if (!wanted || !player.hasPermission(HyperionPermissions.MENU)) {
+            return;
+        }
+
+        List<Model> carried = this.models.of(event.getRightClicked());
+        if (carried.isEmpty()) {
+            return;
+        }
+
+        event.setCancelled(true);
+        this.menus.open(player, ModelMenu.of(this.plugin, this.models, carried.getFirst()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

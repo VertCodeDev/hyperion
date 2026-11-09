@@ -10,6 +10,12 @@ paper-newest = "26.3.build.174-beta"
 packetevents = "2.14.0"
 cloud = "2.1.0"
 cloud-minecraft = "2.0.1"
+# InvUI draws the menus. Since v2 each InvUI release fits one Minecraft version, so the server
+# downloads the one it needs on start: 1.49 for 1.21.x, a 2.x release for each 26.x line.
+invui1 = "1.49"
+invui2 = "2.5.1"
+invui2-mc261 = "2.1.1"
+invui2-mc262 = "2.3.2"
 lombok = "1.18.46"
 annotations = "26.0.2"
 jspecify = "1.0.0"
@@ -28,6 +34,8 @@ packetevents-spigot = { module = "com.github.retrooper:packetevents-spigot", ver
 cloud-annotations = { module = "org.incendo:cloud-annotations", version.ref = "cloud" }
 cloud-paper = { module = "org.incendo:cloud-paper", version.ref = "cloud-minecraft" }
 cloud-minecraft-extras = { module = "org.incendo:cloud-minecraft-extras", version.ref = "cloud-minecraft" }
+invui1-core = { module = "xyz.xenondevs.invui:invui-core", version.ref = "invui1" }
+invui2 = { module = "xyz.xenondevs.invui:invui", version.ref = "invui2" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }

@@ -10,6 +10,11 @@ models:
   # higher is smoother but trails behind.
   interpolation: 2
 
+  # The mob /hy spawn puts a model on, so it walks around and plays its idle and walk
+  # animations. The mob is hidden, silent and gone after a restart. /hy spawn --static places
+  # a model that stands still instead.
+  spawn-entity: pig
+
   # Models on entities play these animations by themselves, when they have them: idle while
   # the entity stands still, walk while it moves. A plugin can turn this off per model.
   auto-animations:

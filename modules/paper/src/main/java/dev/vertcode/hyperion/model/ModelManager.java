@@ -16,8 +16,12 @@ import com.github.retrooper.packetevents.protocol.player.User;
 import net.kyori.adventure.key.Key;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
@@ -54,11 +58,13 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
     private static final String INVALID_ENTITY = "The entity is not in a world";
     private static final String NO_WORLD = "The location has no world";
     private static final String NOT_OWNER = "Spawn a model on the thread that owns its %s";
+    private static final String NOT_A_CARRIER = "%s cannot carry a model: it must be a mob that can be spawned";
 
     private final Plugin plugin;
     private final BlueprintRegistry registry;
     private final HyperionBehaviorRegistry behaviors;
     private final boolean itemModels;
+    private final NamespacedKey carrierKey;
     private final Map<UUID, HyperionModel> models = new ConcurrentHashMap<>();
     private final Map<Integer, List<HyperionModel>> byEntity = new ConcurrentHashMap<>();
     private volatile ModelSettings settings;
@@ -85,6 +91,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
             final PackSettings pack
     ) {
         this.plugin = plugin;
+        this.carrierKey = new NamespacedKey(plugin, "carrier");
         this.registry = registry;
         this.behaviors = behaviors;
         this.itemModels = Feature.ITEM_MODEL_DEFINITIONS.availableOn(version);
@@ -154,6 +161,42 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
         Bukkit.getPluginManager().callEvent(new ModelSpawnEvent(model));
 
         return model;
+    }
+
+    /**
+     * Spawn a mob to carry a model: hidden by the model, silent, and not saved with its chunk,
+     * so it is gone after a restart. Removing the model removes the mob. Call on the thread that
+     * owns the location.
+     *
+     * @param location where the mob spawns
+     * @param type the mob's type, which must be a living entity that can be spawned
+     * @return the mob
+     * @throws IllegalArgumentException if the type cannot carry a model
+     */
+    public Entity spawnCarrier(final Location location, final EntityType type) {
+        Class<? extends Entity> kind = type.getEntityClass();
+        if (kind == null || !type.isSpawnable() || !type.isAlive() || location.getWorld() == null) {
+            throw new IllegalArgumentException(String.format(NOT_A_CARRIER, type.getKey().asString()));
+        }
+
+        return location.getWorld().spawn(location, kind, carrier -> {
+            carrier.setSilent(true);
+            carrier.setPersistent(false);
+            carrier.getPersistentDataContainer().set(this.carrierKey, PersistentDataType.BYTE, (byte) 1);
+            if (carrier instanceof LivingEntity living) {
+                living.setCanPickupItems(false);
+            }
+        });
+    }
+
+    /**
+     * Return whether Hyperion spawned an entity to carry a model.
+     *
+     * @param entity the entity
+     * @return true for a carrier, which goes when its model does
+     */
+    public boolean isCarrier(final Entity entity) {
+        return entity.getPersistentDataContainer().has(this.carrierKey, PersistentDataType.BYTE);
     }
 
     /**
@@ -411,7 +454,12 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
         return this.plugin;
     }
 
-    ModelSettings settings() {
+    /**
+     * Return the model settings in use.
+     *
+     * @return the settings from {@code config.yml}
+     */
+    public ModelSettings settings() {
         return this.settings;
     }
 

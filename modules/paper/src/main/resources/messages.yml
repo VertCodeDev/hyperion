@@ -105,6 +105,8 @@ spawn:
   no-target: "<prefix><error>Look at an entity within <distance> blocks."
   failed: "<prefix><error>The model could not be spawned: <reason>"
   pack-not-built: "<prefix><warning>The resource pack is not built yet; the model shows once it is."
+  spawned-on-mob: "<prefix><text>Spawned <highlight><model></highlight> on a <highlight><entity></highlight><muted>. Sneak and right-click it for its menu."
+  bad-entity: "<prefix><error>'<entity>' cannot carry a model: pick a mob that can be spawned."
 
 # /hy remove
 remove:
@@ -128,6 +130,36 @@ animate:
   stopped-all: "<prefix><text>Stopped every animation on <highlight><model></highlight>."
   no-model: "<prefix><error>No model within <radius> blocks."
   no-animation: "<prefix><error><model> has no animation named '<animation>'."
+
+# The menu a sneaking right-click on a model opens
+menu:
+  title: "<primary><model>"
+  animation: "<text><animation>"
+  animation-length: "<muted>Length: <text><length>s"
+  animation-playing: "<success>Playing"
+  animation-idle: "<dim>Not playing"
+  hint-once: "<muted>Left-click <dim>to play it once"
+  hint-loop: "<muted>Right-click <dim>to loop it"
+  hint-stop: "<muted>Shift-click <dim>to stop it"
+  frozen: "<text>Frozen"
+  moving: "<text>Moving"
+  freeze-hint: "<dim>Click to freeze the mob or let it move again"
+  cannot-freeze: "<dim>Only a model on a mob can be frozen"
+  auto-on: "<text>Idle and walk: <success>on"
+  auto-off: "<text>Idle and walk: <error>off"
+  auto-hint: "<dim>Click to play them by itself, or not"
+  stop-all: "<text>Stop every animation"
+  smaller: "<text>Smaller"
+  bigger: "<text>Bigger"
+  scale: "<muted>Scale: <text><scale>"
+  glow-on: "<text>Glow: <success>on"
+  glow-off: "<text>Glow: <error>off"
+  glow-hint: "<dim>Click to switch the outline"
+  remove: "<error>Remove"
+  remove-hint: "<dim>Removes the model, and the mob it was spawned on"
+  previous: "<primary>« Previous page"
+  next: "<primary>Next page »"
+  unavailable: "<prefix><error>Menus are not available: InvUI could not be loaded. The server log says why."
 
 # Mistakes when typing a command
 command:

@@ -66,7 +66,7 @@ public final class RemoveCommand {
     @Permission(HyperionPermissions.REMOVE)
     public void remove(
             final PlayerSource source,
-            @Argument("radius") @Range(min = "1", max = "256") final @Nullable Double radius,
+            @Argument(value = "radius", suggestions = ValueSuggestions.RADII) @Range(min = "1", max = "256") final @Nullable Double radius,
             @Flag("id") final @Nullable UUID id
     ) {
         Player player = source.source();
@@ -108,7 +108,7 @@ public final class RemoveCommand {
     @Permission(HyperionPermissions.REMOVE)
     public void near(
             final PlayerSource source,
-            @Argument("radius") @Range(min = "1", max = "256") final @Nullable Double radius
+            @Argument(value = "radius", suggestions = ValueSuggestions.RADII) @Range(min = "1", max = "256") final @Nullable Double radius
     ) {
         Player player = source.source();
         double range = radius == null ? NEAR_RADIUS : radius;

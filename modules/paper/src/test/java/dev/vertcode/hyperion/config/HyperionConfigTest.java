@@ -54,6 +54,7 @@ class HyperionConfigTest {
         assertEquals(2, models.interpolation());
         assertTrue(models.autoAnimations().enabled());
         assertEquals("walk", models.autoAnimations().walk());
+        assertEquals("pig", models.spawnEntity());
     }
 
     @Test

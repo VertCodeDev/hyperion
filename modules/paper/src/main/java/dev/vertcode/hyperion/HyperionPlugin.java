@@ -29,6 +29,7 @@ import dev.vertcode.hyperion.model.HyperionModelRegistry;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackFormat;
 import dev.vertcode.hyperion.pack.PackManager;
+import dev.vertcode.hyperion.ui.Menus;
 
 public final class HyperionPlugin extends JavaPlugin {
 
@@ -82,7 +83,8 @@ public final class HyperionPlugin extends JavaPlugin {
 
         // Listeners
         events.registerEvents(new PackListener(packs), this);
-        events.registerEvents(new ModelListener(models, modelRegistry, behaviors), this);
+        Menus menus = Menus.load(this, version);
+        events.registerEvents(new ModelListener(models, modelRegistry, behaviors, this, menus), this);
         this.packetListener = PacketEvents.getAPI()
                 .getEventManager()
                 .registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL);

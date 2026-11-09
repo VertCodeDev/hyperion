@@ -3,14 +3,20 @@
 The plugin server owners install: it loads Blockbench models, builds the resource pack and shows
 models to players. One jar runs on Paper, Folia and Canvas, from Minecraft 1.21 to 26.3.
 
-The jar carries the [api](../api/README.md) and one library, renamed under
-`dev.vertcode.hyperion.libs` so it never clashes with another plugin's copy. The server installs
-one more plugin next to it:
+Hyperion is a Paper plugin (`paper-plugin.yml`). The jar carries the [api](../api/README.md) and
+the [menu modules](../menu/README.md); its libraries are downloaded by the server:
 
 | Library | How it ships | What Hyperion uses it for |
 |---|---|---|
-| [Incendo Cloud](https://github.com/Incendo/cloud) | Inside the jar | The `/hyperion` commands, registered through Paper's Brigadier api |
+| [Incendo Cloud](https://github.com/Incendo/cloud) | Downloaded on first start | The `/hyperion` commands, registered through Paper's Brigadier api |
+| [InvUI](https://github.com/NichtStudioCode/InvUI) | Downloaded on first start, the release that fits the server | The menus |
 | [PacketEvents](https://github.com/retrooper/packetevents) | Separate plugin, required | Sending model packets, and editing the server's own packets to hide parts of an entity or add seats |
+
+`HyperionLoader` runs before the plugin and has Paper download Cloud and InvUI into its
+`libraries` folder, so the first start needs internet access and later starts do not. Paper keeps
+them on Hyperion's own classpath, apart from other plugins' copies. InvUI 1.49 covers 1.21 to
+1.21.11 and each InvUI 2 release one 26.x line, so the loader picks the release by the server's
+version, and Hyperion loads the menu module made for it.
 
 PacketEvents stays a separate plugin so a new Minecraft version only needs a PacketEvents update,
 not a new Hyperion release. Hyperion does not start without it.
@@ -19,7 +25,7 @@ not a new Hyperion release. Hyperion does not start without it.
 
 | Package | Holds |
 |---|---|
-| `dev.vertcode.hyperion` | `HyperionPlugin`: startup and shutdown only |
+| `dev.vertcode.hyperion` | `HyperionPlugin`: startup and shutdown only; `HyperionLoader`: the libraries the server downloads |
 | `blueprint` | `BlueprintRegistry` (loading and reloading), `Blueprint` and its bones and locators, load reports |
 | `blueprint.bbmodel` | `BbmodelFormat` and `BbmodelReader`: `.bbmodel` JSON into plain records |
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
@@ -33,6 +39,7 @@ not a new Hyperion release. Hyperion does not start without it.
 | `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, and `BaseEntityListener`, the PacketEvents listener that hides an entity's parts |
 | `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
 | `animation.molang` | The part of Molang Blockbench keyframes use |
+| `ui` | The model menu, and `Menus`, which loads the InvUI module that fits the server |
 
 ## Models
 
@@ -63,7 +70,7 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy info <model>` | `hyperion.command.info` | Source, size, bone tree, animations, locators and warnings |
 | `/hy reload [model]` | `hyperion.command.reload` | Load every model again, or one, and show what changed |
 | `/hy validate [model]` | `hyperion.command.validate` | The warnings and errors from the last load |
-| `/hy spawn <model> [scale]` | `hyperion.command.spawn` | Spawn a model on its own where you stand |
+| `/hy spawn <model> [scale] [--entity <mob>] [--static]` | `hyperion.command.spawn` | Spawn a model on a mob where you stand, so it walks around; `--static` places it on its own |
 | `/hy attach <model> [scale]` | `hyperion.command.spawn` | Put a model on the entity you look at |
 | `/hy near [radius]` | `hyperion.command.remove` | The models around you, nearest first, each a click away from removal |
 | `/hy remove [radius]` | `hyperion.command.remove` | Remove the nearest model, or every model within the radius |
@@ -76,6 +83,16 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 
 A model argument may leave out `hyperion:`, so `/hy info bosses/dragon` works. `/hy reload` also
 reads `config.yml` and `messages.yml` again and rebuilds the pack.
+
+`/hy spawn` puts the model on a new mob, `models.spawn-entity` in `config.yml` (a pig unless you
+change it), so it walks around and plays its idle and walk animations. The mob is hidden, silent
+and not saved: it goes when the model is removed or the server restarts.
+
+Every optional value suggests itself while you type: scales, speeds, radii and mob names.
+
+Sneaking and right-clicking a model on a mob opens its menu (`hyperion.menu`): its animations to
+play once (left-click), loop (right-click) or stop (shift-click), and controls to freeze the mob,
+switch its idle and walk animations, stop every animation, scale it, make it glow and remove it.
 
 `hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
 

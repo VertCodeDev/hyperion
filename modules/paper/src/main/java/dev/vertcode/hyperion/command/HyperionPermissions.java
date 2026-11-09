@@ -3,7 +3,7 @@ package dev.vertcode.hyperion.command;
 /**
  * The permission nodes of the {@code /hyperion} commands, one per command.
  *
- * <p>Every node is also declared in {@code plugin.yml}, where {@code hyperion.admin} grants
+ * <p>Every node is also declared in {@code paper-plugin.yml}, where {@code hyperion.admin} grants
  * them all.
  */
 public final class HyperionPermissions {
@@ -69,6 +69,11 @@ public final class HyperionPermissions {
      * Play and stop animations on the nearest model, through {@code /hyperion animate}.
      */
     public static final String ANIMATE = "hyperion.command.animate";
+
+    /**
+     * Open a model's menu by sneaking and right-clicking it.
+     */
+    public static final String MENU = "hyperion.menu";
 
     private HyperionPermissions() {
     }

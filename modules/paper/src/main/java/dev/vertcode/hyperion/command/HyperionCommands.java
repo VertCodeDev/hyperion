@@ -88,6 +88,7 @@ public final class HyperionCommands {
                 new RootCommand(plugin, help),
                 new HelpCommand(help),
                 new BlueprintSuggestions(registry),
+                new ValueSuggestions(),
                 new ListCommand(registry),
                 new InfoCommand(registry),
                 new ReloadCommand(plugin, registry, packs),
@@ -96,7 +97,7 @@ public final class HyperionCommands {
                 new PackSendCommand(packs),
                 new PackStatusCommand(packs),
                 new PackExportCommand(plugin, packs),
-                new SpawnCommand(plugin, registry, packs),
+                new SpawnCommand(plugin, registry, packs, models),
                 new RemoveCommand(models),
                 new AnimateCommand(models)
         );

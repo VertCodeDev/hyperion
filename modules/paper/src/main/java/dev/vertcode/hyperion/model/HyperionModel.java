@@ -1483,10 +1483,12 @@ final class HyperionModel implements Model {
 
         this.removed = true;
         this.cancelTask();
+        boolean entityStays = reason == RemovalReason.ENTITY_REMOVED || reason == RemovalReason.ENTITY_UNLOADED;
+        boolean carrierGoes = this.entity != null && !entityStays && this.manager.isCarrier(this.entity);
         for (Viewer viewer : this.viewers.snapshot()) {
             Packets.send(viewer.user(), Packets.destroy(this.displayIds));
             this.viewers.remove(viewer.player().getUniqueId());
-            if (this.entity != null) {
+            if (this.entity != null && !carrierGoes) {
                 this.restoreEntity(viewer, this.entity);
             }
         }
@@ -1500,6 +1502,10 @@ final class HyperionModel implements Model {
         this.animator.clear();
         this.views.clear();
         this.manager.forget(this);
+        if (this.entity != null && carrierGoes) {
+            this.entity.remove();
+        }
+
         Bukkit.getPluginManager().callEvent(new ModelRemoveEvent(this, reason));
     }
 

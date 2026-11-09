@@ -58,7 +58,7 @@ public final class AnimateCommand {
     public void play(
             final PlayerSource source,
             @Argument(value = "animation", suggestions = SUGGESTIONS) final String animation,
-            @Argument("speed") @Range(min = "0.05", max = "10") final @Nullable Float speed
+            @Argument(value = "speed", suggestions = ValueSuggestions.SPEEDS) @Range(min = "0.05", max = "10") final @Nullable Float speed
     ) {
         Player player = source.source();
         Model model = this.nearest(player);

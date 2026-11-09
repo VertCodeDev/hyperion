@@ -129,6 +129,7 @@ The plugin jar is `modules/paper/build/libs/hyperion-paper-v<version>.jar`.
 |---|---|
 | `modules/api` | The API other plugins compile against |
 | `modules/paper` | The plugin, for Paper, Folia and Canvas |
+| `modules/menu` | What a menu shows, drawn by `menu-invui1` (1.21.x) or `menu-invui2` (26.x) |
 
 # 💻 API
 

@@ -95,7 +95,14 @@ public record HyperionConfig(PackSettings pack, ModelSettings models) {
                 config.getInt("pack.custom-model-data-start", DEFAULT_CUSTOM_MODEL_DATA)
         );
 
-        return new HyperionConfig(pack, new ModelSettings(viewDistance, interpolation, autoAnimations(config)));
+        String spawnEntity = config.getString("models.spawn-entity", "pig").trim().toLowerCase(Locale.ROOT);
+        if (spawnEntity.startsWith(MINECRAFT)) {
+            spawnEntity = spawnEntity.substring(MINECRAFT.length());
+        }
+
+        ModelSettings models = new ModelSettings(viewDistance, interpolation, autoAnimations(config), spawnEntity);
+
+        return new HyperionConfig(pack, models);
     }
 
     /**
