@@ -210,7 +210,7 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
         }
 
         String steeringMode = config.getString(STEERING + "mode", "walking").trim().toLowerCase(Locale.ROOT);
-        if (!"walking".equals(steeringMode) && !"flying".equals(steeringMode)) {
+        if (!steeringMode.equals("walking") && !steeringMode.equals("flying")) {
             logger.warning(String.format(BAD_VALUE, steeringMode, "behaviors.seats.steering.mode", "walking"));
             steeringMode = "walking";
         }
@@ -223,7 +223,7 @@ public record HyperionConfig(PackSettings pack, ModelSettings models, BedrockSet
 
         SeatSteering steering = new SeatSteering(
                 config.getBoolean(STEERING + "enabled", false),
-                "flying".equals(steeringMode),
+                steeringMode.equals("flying"),
                 speed,
                 (float) Math.max(0d, config.getDouble(STEERING + "jump", DEFAULT_JUMP)),
                 entityChoices(config.getConfigurationSection(STEERING + "entities"))

@@ -66,7 +66,7 @@ class BedrockPackBuilderTest {
     @Test
     void leavesOutTheCubesOfBonesThatAreNeverDrawn() throws IOException {
         Blueprint blueprint = Fixtures.blueprint("groups_layout", new LoadReport("groups_layout.bbmodel"));
-        Map<String, byte[]> files = unzip(BedrockPackBuilder.build(List.of(blueprint), bone -> "head".equals(bone.name())).zip());
+        Map<String, byte[]> files = unzip(BedrockPackBuilder.build(List.of(blueprint), bone -> bone.name().equals("head")).zip());
         String slug = BedrockIds.slug(blueprint.key());
         JsonArray bones = json(files, "models/entity/" + slug + ".geo.json")
                 .getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject()

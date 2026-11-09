@@ -36,7 +36,7 @@ public final class BedrockIds {
      * @return the name, such as {@code bosses_dragon}
      */
     public static String slug(final Key key) {
-        String name = "hyperion".equals(key.namespace()) ? key.value() : key.namespace() + "_" + key.value();
+        String name = key.namespace().equals("hyperion") ? key.value() : key.namespace() + "_" + key.value();
 
         return UNSAFE.matcher(name.toLowerCase(Locale.ROOT)).replaceAll("_");
     }

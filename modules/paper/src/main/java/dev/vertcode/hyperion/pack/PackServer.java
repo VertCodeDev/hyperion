@@ -72,7 +72,7 @@ final class PackServer {
      */
     private static void answer(final HttpExchange exchange, final @Nullable ResourcePack pack) throws IOException {
         try (exchange) {
-            boolean get = "GET".equals(exchange.getRequestMethod());
+            boolean get = exchange.getRequestMethod().equals("GET");
             String path = exchange.getRequestURI().getPath();
             if (pack == null || !get || !path.equals("/" + pack.sha1() + ".zip")) {
                 exchange.sendResponseHeaders(NOT_FOUND, NO_BODY);

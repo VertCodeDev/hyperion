@@ -210,7 +210,7 @@ public final class HyperionExtension implements Extension {
         String type = event.has("t") ? event.get("t").getAsString() : "";
         int entity = event.has("entity") ? event.get("entity").getAsInt() : 0;
         List<UUID> players = players(event.get("players"));
-        if ("gone".equals(type)) {
+        if (type.equals("gone")) {
             for (UUID player : players) {
                 SeenEntity seenEntity = new SeenEntity(player, entity);
                 this.states.remove(seenEntity);
@@ -220,7 +220,7 @@ public final class HyperionExtension implements Extension {
             return;
         }
 
-        if (!"state".equals(type)) {
+        if (!type.equals("state")) {
             return;
         }
 
