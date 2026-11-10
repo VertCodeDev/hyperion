@@ -26,6 +26,12 @@ public enum Feature {
     PLAYER_INPUT_PACKET(1, 21, 2),
 
     /**
+     * Any item can be worn through the {@code equippable} component, and armor draws from
+     * equipment assets named by it, rather than from the armor material's fixed textures.
+     */
+    EQUIPPABLE(1, 21, 2),
+
+    /**
      * Items render through item definitions in {@code assets/<namespace>/items}, chosen with the
      * {@code item_model} component, rather than custom model data overrides on a base item.
      */
