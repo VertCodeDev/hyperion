@@ -32,12 +32,14 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.data` | The plain records a file is read into: cubes, groups, textures, locators, animations |
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
-| `config` | `HyperionConfig`, `ModelSettings`, `BehaviorSettings`, `PackSettings`, `DebugSettings` and `GallerySettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
+| `config` | `HyperionConfig`, `ModelSettings`, `BehaviorSettings`, `PackSettings`, `DebugSettings`, `GallerySettings` and `ArmorSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
 | `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it |
+| `pack.armor` | `ArmorCompiler` writes armor into the pack: item models, equipment assets, the 3D layers `GeometryLayers` encodes, the 1.21 to 1.21.1 `LeatherAtlas`, and the vanilla shaders `ShaderPatcher` extends, read from the `ClientJar` |
+| `armor` | `HyperionArmorRegistry` and `ArmorLoader` (the sets in `plugins/Hyperion/armor`), `ArmorItems` (each version's items), `ArmorGeometry` (a bone's faces in its limb's space) and `ArmorTracker`, which fires the armor events |
 | `model` | `ModelManager` (spawning, the tracker, following reloads), `HyperionModel` and its bones, locators and viewers, and the api's model registry |
 | `render` | The bone and part matrices, the item display's entity data, the items parts show, and the packets |
 | `behavior` | `HyperionBehaviorRegistry`, the behavior types plugins register, and `BuiltinTypes`: the head, hitbox, seat, name tag, hand and ghost behaviors Hyperion ships |
-| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats, `StaffToolListener` for debug views and previews of players who leave; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
+| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats, `StaffToolListener` for debug views and previews of players who leave, `ArmorListener` and `ArmorEquipListener` for armor; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
 | `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
 | `animation.molang` | The part of Molang Blockbench keyframes use |
 | `ui` | The model menu, the `Gallery` with its `Previews`, and `Menus`, which loads the InvUI module that fits the server |
@@ -85,7 +87,9 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy effect stop` | `hyperion.command.effect` | Stop every effect within 16 blocks |
 | `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
 | `/hy debug [view]` | `hyperion.command.debug` | Show or hide `bones`, `hitboxes`, `locators`, `seats` or `effects` on what is near you, `all` or `off`; without a view, which are on |
-| `/hy gallery [filter] [--effects]` | `hyperion.command.gallery` | Browse, preview and spawn every model, or every effect, in a menu |
+| `/hy gallery [filter] [--effects] [--armor]` | `hyperion.command.gallery` | Browse, preview and spawn every model, every effect or every armor set in a menu |
+| `/hy armor list` | `hyperion.command.armor` | Every armor set and its pieces |
+| `/hy armor give <player> <set> [piece]` | `hyperion.command.armor` | Give a player a whole set, or one piece of it |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
 | `/hy pack send [players]` | `hyperion.command.pack.send` | Offer the pack again, to some players or everyone |
 | `/hy pack status` | `hyperion.command.pack.status` | Hosting, link, size and hash, and how players are doing with it |
@@ -138,9 +142,105 @@ with nobody debugging, a frame pays one map check. Leaving turns your views off.
 `/hy gallery --effects`, or the star at the bottom, lists every effect: left-click plays it on
 the nearest model, right-click where you stand, shift-click with its camera on you.
 
+`/hy gallery --armor`, or the chestplate at the bottom, lists every armor set: left-click gives
+you the whole set, right-click puts it on, with what you wore going to your inventory. Both also
+need `hyperion.command.armor`.
+
 You have one preview at a time. It goes after `gallery.preview-seconds`, when you leave, or with
 the barrier button. Spawning from the gallery also needs `hyperion.command.spawn`, and playing
 effects `hyperion.command.effect`.
+
+## Armor
+
+Every `.bbmodel` in `plugins/Hyperion/armor` is an armor set, keyed `hyperion:<file name>` like
+models. On first start Hyperion writes `armor-template.bbmodel` next to the folder: open it in
+Blockbench and build on it, since its bones sit where vanilla's limbs turn. A set has a piece for
+each slot it has bones for, so a file with only a `helmet` bone is a hat.
+
+| Piece | Bones |
+|---|---|
+| Helmet | `helmet` |
+| Chestplate | `chestplate`, `right_arm`, `left_arm` |
+| Leggings | `leggings`, `right_leg`, `left_leg` |
+| Boots | `right_boot`, `left_boot` |
+
+Groups under a bone belong to it, with their rotations. Textures are told apart by name:
+
+| Texture | What it is |
+|---|---|
+| `flat_outer` | The flat look of the helmet, chestplate and boots, on vanilla's 64 by 32 armor layout |
+| `flat_inner` | The flat look of the leggings |
+| `flat_outer_tint`, `flat_inner_tint` | The part of the flat look that takes the dye color |
+| `flat_outer_glow`, `flat_inner_glow` | The part of the flat look that lights up, where the shader runs |
+| `icon_<piece>` | A piece's flat inventory icon, such as `icon_helmet`; without one, the icon is the piece in 3D |
+| Any other | The model's own; a name ending in `_tint` takes the dye color, one ending in `_glow` lights up |
+
+Without a flat texture, Hyperion paints one by projecting the model onto vanilla's armor boxes.
+
+An optional `.yml` of the same name holds the rest:
+
+```yaml
+name: "<aqua>Frost"
+base: netherite          # the vanilla armor the items are made from: sounds, enchanting, Bedrock
+armor: [3, 8, 6, 3]      # helmet, chestplate, leggings, boots; the base's when left out
+toughness: 2
+knockback-resistance: 0
+dyeable: false
+data:                    # free values for plugins, read with set.data()
+  element: ice
+```
+
+How a set is drawn depends on the version:
+
+| Version | Helmet | Chestplate, leggings, boots | Icon |
+|---|---|---|---|
+| 1.21 to 1.21.1 | 3D, the pack's base item worn on the head; Hyperion lets players put it on | Flat: leather in a color that names the set, drawn from a widened leather texture by a patched shader | Custom model data |
+| 1.21.2 to 1.21.3 | 3D, worn through the `equippable` component | Flat, or 3D with `armor.shader` | Custom model data |
+| 1.21.4 to 26.3 | 3D, picked by display context | Flat, or 3D with `armor.shader` | Item model |
+
+The helmet is an item model, so its cubes are snapped to 22.5 degree turns on one axis. With
+`armor.shader: true`, chestplates, leggings and boots are drawn in 3D, MythicArmors style: the
+model's faces are stored in extra equipment layers, invisible to vanilla, and a core shader draws
+them on the limbs vanilla already moves. Each layer draws two faces per limb, so
+`armor.max-layers` (default 16) gives a limb 32 faces, about five cubes; the log says when a set
+needs more. Past `armor.render-distance` blocks, and for players with Iris or OptiFine, which do
+not run core shaders, the flat look shows instead.
+
+Hyperion never ships Mojang's files. It downloads the Minecraft client jar of the server's
+version from Mojang once, into `plugins/Hyperion/cache`, checks its hash, and reads the vanilla
+shader and leather texture from it. Its own code is added to the shader at points every version
+has, and the result goes in a pack overlay only that exact version reads, so a ViaVersion player
+on another version gets the flat look instead of a broken shader. Any other pack that replaces the
+entity shader clashes with it.
+
+Limits of the shader: it learns how a limb is turned from the face vanilla gives it, which works
+exactly for the body and legs. Arms also roll a little, swaying while idle and more while
+swinging, and that roll it cannot see, so faces far from the arm shift by up to a few pixels then.
+It is off by default until it has been tried in game.
+
+### Armor for plugins
+
+`Hyperion.armor()` finds sets, builds items and tells what a player wears. The events fire on the
+player's own thread, however the armor changed, and also when a player joins or leaves wearing it:
+
+| Event | When |
+|---|---|
+| `ArmorEquipAttemptEvent` | A player tries to put a piece on: right-click, placing, shift-click, drag, hotbar or offhand swap, or a dispenser. Cancel it to keep the piece off. |
+| `ArmorEquipEvent`, `ArmorUnequipEvent` | A piece went on or came off, with the cause: player, dispenser, break, death, join, quit or other |
+| `ArmorSetCompleteEvent`, `ArmorSetBreakEvent` | The player now wears every piece of a set, or no longer does |
+| `ArmorLoadEvent` | The sets loaded or reloaded |
+
+```java
+@EventHandler
+public void onFullSet(ArmorSetCompleteEvent event) {
+    if (event.set().key().asString().equals("hyperion:frost")) {
+        event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 0));
+    }
+}
+```
+
+Pieces are known by a tag on the item, so renaming, enchanting, dyeing or trimming one keeps it
+the same piece.
 
 ## Live models
 
@@ -315,6 +415,9 @@ item.
 | `self-host` (default) | A small web server built into Hyperion serves it on `pack.self-host.port`. Players download from the address they joined with, unless `pack.self-host.address` says otherwise. |
 | `url` | You upload the zip from `/hy pack export` and put its link in `pack.url`. Upload it again after every change. |
 | `off` | Nothing is sent; merge the exported zip into your own pack. |
+
+Armor sets go into the same pack; see [Armor](#armor) for what each version gets, and for the
+overlay the patched shaders live in.
 
 `pack.required` kicks players who decline or fail the download, `pack.send-on-join` and
 `pack.resend-on-change` decide when it is offered, and `pack.base-item` (default `paper`) is the

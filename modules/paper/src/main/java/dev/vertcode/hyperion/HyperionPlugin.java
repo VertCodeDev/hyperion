@@ -1,6 +1,7 @@
 package dev.vertcode.hyperion;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.logging.Level;
@@ -14,8 +15,16 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.Hyperion;
+import dev.vertcode.hyperion.api.armor.ArmorSet;
+import dev.vertcode.hyperion.api.event.ArmorLoadEvent;
 import dev.vertcode.hyperion.api.event.BlueprintLoadEvent;
+import dev.vertcode.hyperion.api.version.Feature;
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
+import dev.vertcode.hyperion.armor.ArmorItems;
+import dev.vertcode.hyperion.armor.ArmorLoader;
+import dev.vertcode.hyperion.armor.ArmorTracker;
+import dev.vertcode.hyperion.armor.HyperionArmorRegistry;
+import dev.vertcode.hyperion.armor.HyperionArmorSet;
 import dev.vertcode.hyperion.bedrock.BedrockLink;
 import dev.vertcode.hyperion.bedrock.BedrockPlayers;
 import dev.vertcode.hyperion.bedrock.BedrockToken;
@@ -31,6 +40,8 @@ import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessageBook;
 import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.effect.HyperionEffects;
+import dev.vertcode.hyperion.listener.ArmorEquipListener;
+import dev.vertcode.hyperion.listener.ArmorListener;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
 import dev.vertcode.hyperion.listener.EffectListener;
@@ -53,6 +64,9 @@ public final class HyperionPlugin extends JavaPlugin {
     private static final String LOADED = "Loaded %d model(s) in %d ms: %d failed, %d warning(s)";
     private static final String LOAD_FAILED = "Loading the models failed";
     private static final String LINK_FAILED = "The Bedrock link could not start on port %d; is the port in use?";
+    private static final String ARMOR_LOADED = "Loaded %d armor set(s)";
+    private static final String ARMOR_TEMPLATE = "armor-template.bbmodel";
+    private static final String CACHE = "cache";
 
     private @Nullable BlueprintRegistry registry;
     private @Nullable PackManager packs;
@@ -60,6 +74,9 @@ public final class HyperionPlugin extends JavaPlugin {
     private @Nullable HyperionEffects effects;
     private @Nullable DebugViews debug;
     private @Nullable Previews previews;
+    private @Nullable HyperionArmorRegistry armor;
+    private @Nullable ArmorItems armorItems;
+    private @Nullable ArmorTracker armorTracker;
     private List<PacketListenerCommon> packetListeners = List.of();
     private @Nullable BedrockLink bedrockLink;
 
@@ -104,8 +121,28 @@ public final class HyperionPlugin extends JavaPlugin {
         BuiltinTypes.register(this, behaviors, models);
         packs.hiddenBones(BuiltinTypes.hidesCubes(() -> models.settings().behaviors()));
         registry.useSpawner(models);
-        packs.onBuilt(models::refresh);
         this.models = models;
+
+        // Armor
+        ArmorItems armorItems = new ArmorItems(version, config.pack().baseItem());
+        HyperionArmorRegistry armor = new HyperionArmorRegistry(
+                this.getDataPath().resolve(ArmorLoader.FOLDER),
+                this.getDataPath().resolve(CACHE),
+                this.getServer().getMinecraftVersion(),
+                armorItems,
+                config.armor(),
+                this.getLogger()
+        );
+        ArmorTracker armorTracker = new ArmorTracker(armor, events);
+        armor.useTracker(armorTracker);
+        packs.armor(armor::build);
+        packs.onBuilt(built -> {
+            models.refresh(built);
+            armorItems.use(built.armor());
+        });
+        this.armor = armor;
+        this.armorItems = armorItems;
+        this.armorTracker = armorTracker;
 
         // Effects
         HyperionEffects effects = new HyperionEffects(this, models, registry, config.effects(), debug);
@@ -115,9 +152,14 @@ public final class HyperionPlugin extends JavaPlugin {
 
         // Api
         HyperionModelRegistry modelRegistry = new HyperionModelRegistry(registry, models, packs);
-        Hyperion.install(new HyperionService(modelRegistry, models, behaviors, formats, effects));
+        Hyperion.install(new HyperionService(modelRegistry, models, behaviors, formats, effects, armor));
         registry.reloadAll()
                 .whenComplete(this::logLoad)
+                .thenApply(result -> {
+                    this.prepareArmorFolder();
+                    this.reloadArmor();
+                    return result;
+                })
                 .thenCompose(result -> packs.rebuild());
 
         // Listeners
@@ -130,6 +172,8 @@ public final class HyperionPlugin extends JavaPlugin {
         events.registerEvents(new SeatListener(models), this);
         events.registerEvents(new EffectListener(effects.cameras()), this);
         events.registerEvents(new StaffToolListener(debug, previews), this);
+        events.registerEvents(new ArmorListener(armorTracker), this);
+        events.registerEvents(new ArmorEquipListener(armor, armorTracker, events, !Feature.EQUIPPABLE.availableOn(version)), this);
         EventManager packets = PacketEvents.getAPI().getEventManager();
         this.packetListeners = List.of(
                 packets.registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL),
@@ -138,8 +182,8 @@ public final class HyperionPlugin extends JavaPlugin {
         );
 
         // Commands
-        Gallery gallery = new Gallery(this, registry, models, effects, previews, menus);
-        HyperionCommands.register(this, registry, packs, models, effects, debug, gallery);
+        Gallery gallery = new Gallery(this, registry, models, effects, previews, menus, armor);
+        HyperionCommands.register(this, registry, packs, models, effects, debug, gallery, armor);
     }
 
     @Override
@@ -204,6 +248,50 @@ public final class HyperionPlugin extends JavaPlugin {
 
         if (this.previews != null) {
             this.previews.configure(config.gallery());
+        }
+
+        if (this.armor != null && this.armorItems != null) {
+            this.armor.configure(config.armor());
+            this.armorItems.baseItem(config.pack().baseItem());
+            this.reloadArmor();
+        }
+    }
+
+    /**
+     * Load the armor sets again, tell plugins, and compare what every online player wears with
+     * the new sets. Reads files, so call it off the tick threads; the pack is rebuilt after.
+     */
+    private void reloadArmor() {
+        HyperionArmorRegistry current = this.armor;
+        ArmorTracker tracker = this.armorTracker;
+        if (current == null || tracker == null) {
+            return;
+        }
+
+        List<HyperionArmorSet> sets = current.load();
+        this.getLogger().info(String.format(ARMOR_LOADED, sets.size()));
+        List<ArmorSet> published = List.copyOf(sets);
+        this.getServer().getAsyncScheduler().runNow(this, task -> this.getServer().getPluginManager()
+                .callEvent(new ArmorLoadEvent(published)));
+        tracker.recheck(this, this.getServer().getOnlinePlayers());
+    }
+
+    /**
+     * Make the armor folder on first start, with Blockbench's armor template next to it.
+     */
+    private void prepareArmorFolder() {
+        HyperionArmorRegistry current = this.armor;
+        if (current == null || Files.isDirectory(current.folder())) {
+            return;
+        }
+
+        try {
+            Files.createDirectories(current.folder());
+            if (!Files.exists(this.getDataPath().resolve(ARMOR_TEMPLATE))) {
+                this.saveResource(ARMOR_TEMPLATE, false);
+            }
+        } catch (IOException | IllegalArgumentException exception) {
+            this.getLogger().log(Level.WARNING, "Could not make the armor folder", exception);
         }
     }
 

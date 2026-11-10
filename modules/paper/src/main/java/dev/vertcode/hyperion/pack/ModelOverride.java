@@ -6,5 +6,5 @@ package dev.vertcode.hyperion.pack;
  * @param customModelData the number
  * @param model the model's id
  */
-record ModelOverride(int customModelData, String model) {
+public record ModelOverride(int customModelData, String model) {
 }

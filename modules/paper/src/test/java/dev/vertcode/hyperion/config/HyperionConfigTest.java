@@ -162,4 +162,18 @@ class HyperionConfigTest {
         assertEquals(0.4f, config.debug().axisLength());
         assertEquals(120, config.gallery().previewSeconds());
     }
+
+    @Test
+    void readsTheArmorSection() {
+        assertEquals(new ArmorSettings(false, 32, 16), HyperionConfig.of(this.bundled, this.logger, ITEMS).armor());
+    }
+
+    @Test
+    void fallsBackOnArmorValuesItCannotUse() {
+        this.bundled.set("armor.shader", true);
+        this.bundled.set("armor.render-distance", 0);
+        this.bundled.set("armor.max-layers", 500);
+
+        assertEquals(new ArmorSettings(true, 32, 16), HyperionConfig.of(this.bundled, this.logger, ITEMS).armor());
+    }
 }

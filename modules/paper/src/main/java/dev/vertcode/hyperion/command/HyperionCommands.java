@@ -19,6 +19,7 @@ import org.incendo.cloud.paper.util.sender.PaperSimpleSenderMapper;
 import org.incendo.cloud.paper.util.sender.Source;
 
 import dev.vertcode.hyperion.HyperionPlugin;
+import dev.vertcode.hyperion.armor.HyperionArmorRegistry;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessagePalette;
@@ -63,6 +64,7 @@ public final class HyperionCommands {
      * @param effects the effects the effect commands play
      * @param debug the debug views the debug command switches
      * @param gallery the gallery the gallery command opens
+     * @param armor the armor sets the armor command lists and gives
      */
     public static void register(
             final HyperionPlugin plugin,
@@ -71,7 +73,8 @@ public final class HyperionCommands {
             final ModelManager models,
             final HyperionEffects effects,
             final DebugViews debug,
-            final Gallery gallery
+            final Gallery gallery,
+            final HyperionArmorRegistry armor
     ) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
@@ -111,7 +114,8 @@ public final class HyperionCommands {
                 new AnimateCommand(models),
                 new EffectCommand(effects, models),
                 new DebugCommand(debug),
-                new GalleryCommand(gallery)
+                new GalleryCommand(gallery),
+                new ArmorCommand(plugin, armor)
         );
     }
 

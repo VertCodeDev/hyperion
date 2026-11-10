@@ -33,7 +33,8 @@ boss.animator().play("roar");
 | `api.model.source` | Where models come from and the formats that read them |
 | `api.model.metadata` | Custom data kept from Blockbench files |
 | `api.animation` | Playing, layering, fading and stopping animations, for everyone or one player |
-| `api.event` | Spawn, removal, interaction, viewer and blueprint load events |
+| `api.armor` | `ArmorRegistry`, armor sets and their pieces, `WornArmor` and the data a set's `.yml` gives plugins |
+| `api.event` | Spawn, removal, interaction, viewer and blueprint load events, and the armor events: equip attempts, equip and unequip, full sets and loads |
 | `api.version` | `MinecraftVersion` and `Feature`: what the running server has, for code that runs on 1.21 to 26.3 |
 
 ## Threading

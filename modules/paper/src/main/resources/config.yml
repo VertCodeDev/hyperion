@@ -96,6 +96,18 @@ gallery:
   # How long a private preview stays before it goes, in seconds.
   preview-seconds: 120
 
+# Custom armor sets, from the .bbmodel files in plugins/Hyperion/armor.
+armor:
+  # Draw chestplates, leggings and boots in 3D with a core shader, from 1.21.2. Off draws them
+  # flat. Helmets are 3D either way. Players with Iris or OptiFine always see them flat.
+  # Hyperion reads the shader from the Minecraft client jar, which it downloads from Mojang once.
+  shader: false
+  # How far from the camera armor is drawn in 3D, in blocks. Beyond it, flat.
+  render-distance: 32
+  # The most equipment layers a set may use for 3D. Each draws two faces on every limb, so 16
+  # layers give a limb 32 faces, about five cubes.
+  max-layers: 16
+
 # The resource pack that holds every model.
 pack:
   # How players get the pack:

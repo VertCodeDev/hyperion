@@ -220,6 +220,13 @@ gallery:
   hint-effect-preview: "<muted>Click <dim>to play it on your preview"
   effects: "<text>Effects"
   effects-hint: "<dim>Every loaded effect, to try out"
+  armor: "<text>Armor"
+  armor-hint: "<dim>Every armor set, to try on"
+  title-armor: "<primary>Armor <dim>(<count>)"
+  armor-set: "<muted><set>"
+  armor-pieces: "<muted><count> piece(s)"
+  hint-armor-give: "<muted>Left-click <dim>to get the whole set"
+  hint-armor-wear: "<muted>Right-click <dim>to put it on"
   back: "<text>Back"
   spawn-mob: "<text>Spawn on a mob"
   spawn-static: "<text>Spawn on its own"
@@ -232,6 +239,17 @@ gallery:
   preview-removed: "<prefix><text>Removed your preview."
   no-preview: "<prefix><muted>You have no preview."
   preview-failed: "<prefix><error>The preview could not be spawned: <reason>"
+
+# /hy armor
+armor:
+  heading: "<prefix><primary>Armor sets <dim>(<count>)"
+  entry: " <text><set><muted>  <pieces>"
+  empty: "<prefix><muted>No armor sets are loaded. Put .bbmodel files in plugins/Hyperion/armor and run /hy reload."
+  unknown-set: "<prefix><error>There is no armor set '<set>'."
+  unknown-piece: "<prefix><error><set> has no <piece>. It has: <pieces>"
+  given: "<prefix><text>Gave <highlight><player></highlight> <count> piece(s) of <highlight><set></highlight>."
+  received: "<prefix><text>You got <count> piece(s) of <highlight><set></highlight>."
+  not-built: "<prefix><error>The resource pack is not built yet, so armor has no models. Try again in a moment."
 
 # Mistakes when typing a command
 command:

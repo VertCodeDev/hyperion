@@ -43,6 +43,7 @@ permissions:
       hyperion.command.effect: true
       hyperion.command.debug: true
       hyperion.command.gallery: true
+      hyperion.command.armor: true
       hyperion.menu: true
   hyperion.command.help:
     description: See the Hyperion help menu.
@@ -88,6 +89,9 @@ permissions:
     default: op
   hyperion.command.gallery:
     description: Browse, preview and spawn every model and effect in a menu.
+    default: op
+  hyperion.command.armor:
+    description: List armor sets and give their pieces.
     default: op
   hyperion.menu:
     description: Open a model's menu by sneaking and right-clicking it.

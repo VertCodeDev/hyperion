@@ -8,6 +8,8 @@ import java.util.Map;
 
 import net.kyori.adventure.key.Key;
 
+import dev.vertcode.hyperion.armor.ArmorPackInfo;
+
 /**
  * A built resource pack: the zip, its hash, and which parts every bone is drawn with.
  *
@@ -23,6 +25,7 @@ public final class ResourcePack {
     private final int files;
     private final long millis;
     private final Map<Key, Map<String, List<ModelPart>>> parts;
+    private final ArmorPackInfo armor;
 
     /**
      * Create a built pack.
@@ -32,19 +35,31 @@ public final class ResourcePack {
      * @param files how many files the zip holds
      * @param millis how long the build took
      * @param parts the parts of every bone with cubes, by blueprint and bone name
+     * @param armor the numbers armor items need
      */
     ResourcePack(
             final byte[] zip,
             final String sha1,
             final int files,
             final long millis,
-            final Map<Key, Map<String, List<ModelPart>>> parts
+            final Map<Key, Map<String, List<ModelPart>>> parts,
+            final ArmorPackInfo armor
     ) {
         this.zip = zip;
         this.sha1 = sha1;
         this.files = files;
         this.millis = millis;
         this.parts = Map.copyOf(parts);
+        this.armor = armor;
+    }
+
+    /**
+     * Return the numbers this pack gave armor items.
+     *
+     * @return the armor info
+     */
+    public ArmorPackInfo armor() {
+        return this.armor;
     }
 
     /**

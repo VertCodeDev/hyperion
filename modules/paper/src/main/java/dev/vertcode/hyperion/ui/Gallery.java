@@ -16,15 +16,20 @@ import org.bukkit.Registry;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.animation.BakedAnimation;
 import dev.vertcode.hyperion.api.animation.LoopMode;
+import dev.vertcode.hyperion.api.armor.ArmorPiece;
+import dev.vertcode.hyperion.api.armor.ArmorSlot;
 import dev.vertcode.hyperion.api.effect.Effect;
 import dev.vertcode.hyperion.api.effect.EffectAnchor;
 import dev.vertcode.hyperion.api.model.Model;
+import dev.vertcode.hyperion.armor.HyperionArmorRegistry;
+import dev.vertcode.hyperion.armor.HyperionArmorSet;
 import dev.vertcode.hyperion.blueprint.Blueprint;
 import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.command.HyperionPermissions;
@@ -58,6 +63,7 @@ public final class Gallery {
     private final HyperionEffects effects;
     private final Previews previews;
     private final Menus menus;
+    private final HyperionArmorRegistry armor;
 
     /**
      * Create the gallery.
@@ -68,6 +74,7 @@ public final class Gallery {
      * @param effects the effects to list and play
      * @param previews the players' private previews
      * @param menus opens the pages
+     * @param armor the armor sets to list and hand out
      */
     public Gallery(
             final Plugin plugin,
@@ -75,7 +82,8 @@ public final class Gallery {
             final ModelManager models,
             final HyperionEffects effects,
             final Previews previews,
-            final Menus menus
+            final Menus menus,
+            final HyperionArmorRegistry armor
     ) {
         this.plugin = plugin;
         this.registry = registry;
@@ -83,6 +91,7 @@ public final class Gallery {
         this.effects = effects;
         this.previews = previews;
         this.menus = menus;
+        this.armor = armor;
     }
 
     /**
@@ -146,6 +155,15 @@ public final class Gallery {
     }
 
     /**
+     * Open the armor page. Call on the player's thread.
+     *
+     * @param player the player
+     */
+    public void openArmor(final Player player) {
+        this.menus.open(player, this.armorPage());
+    }
+
+    /**
      * Open another page from a click, once the click is done.
      *
      * @param player who clicked
@@ -177,6 +195,14 @@ public final class Gallery {
                                 HyperionMessages.GALLERY__EFFECTS_HINT.component()
                         ),
                         (player, click) -> this.switchTo(player, this.effectsPage())
+                ),
+                new MenuButton(
+                        () -> Icons.of(
+                                Material.DIAMOND_CHESTPLATE,
+                                HyperionMessages.GALLERY__ARMOR.component(),
+                                HyperionMessages.GALLERY__ARMOR_HINT.component()
+                        ),
+                        (player, click) -> this.switchTo(player, this.armorPage())
                 ),
                 this.removePreviewButton()
         );
@@ -475,6 +501,77 @@ public final class Gallery {
     private Optional<Model> previewOf(final Player player, final Blueprint blueprint) {
         return this.previews.current(player.getUniqueId())
                 .filter(preview -> preview.blueprint().key().equals(blueprint.key()));
+    }
+
+    // Armor
+
+    private MenuPage armorPage() {
+        List<HyperionArmorSet> sets = this.armor.sorted();
+        List<MenuButton> content = new ArrayList<>(sets.size());
+        for (HyperionArmorSet set : sets) {
+            content.add(new MenuButton(() -> this.armorIcon(set), (player, click) -> this.armorClick(player, set, click)));
+        }
+
+        List<MenuButton> controls = List.of(new MenuButton(
+                () -> Icons.of(Material.OAK_DOOR, HyperionMessages.GALLERY__BACK.component()),
+                (player, click) -> {
+                    this.openModelsLater(player);
+                    return true;
+                }
+        ));
+
+        return this.page(HyperionMessages.GALLERY__TITLE_ARMOR.component(value("count", sets.size())), content, controls);
+    }
+
+    private ItemStack armorIcon(final HyperionArmorSet set) {
+        Component[] lore = {
+            HyperionMessages.GALLERY__ARMOR_SET.component(value("set", set.key().asString())),
+            HyperionMessages.GALLERY__ARMOR_PIECES.component(value("count", set.pieces().size())),
+            HyperionMessages.GALLERY__HINT_ARMOR_GIVE.component(),
+            HyperionMessages.GALLERY__HINT_ARMOR_WEAR.component()
+        };
+        ArmorPiece shown = set.piece(ArmorSlot.CHEST).or(() -> set.pieces().stream().findFirst()).orElse(null);
+        try {
+            if (shown != null) {
+                return Icons.withLore(shown.item(), lore);
+            }
+        } catch (IllegalStateException exception) {
+            // The pack is not built yet, so the piece has no model to show.
+        }
+
+        return Icons.of(Material.LEATHER_CHESTPLATE, Component.text(set.key().asString()), lore);
+    }
+
+    private boolean armorClick(final Player player, final HyperionArmorSet set, final MenuClick click) {
+        if ((click != MenuClick.LEFT && click != MenuClick.RIGHT) || !this.allowed(player, HyperionPermissions.ARMOR)) {
+            return true;
+        }
+
+        List<ItemStack> spare = new ArrayList<>();
+        try {
+            for (ArmorPiece piece : set.pieces()) {
+                ItemStack item = piece.item();
+                if (click == MenuClick.RIGHT) {
+                    EquipmentSlot slot = piece.slot().equipmentSlot();
+                    ItemStack worn = player.getEquipment().getItem(slot);
+                    player.getEquipment().setItem(slot, item);
+                    item = worn;
+                }
+
+                if (!item.isEmpty()) {
+                    spare.add(item);
+                }
+            }
+        } catch (IllegalStateException exception) {
+            HyperionMessages.ARMOR__NOT_BUILT.send(player);
+            return true;
+        }
+
+        for (ItemStack left : player.getInventory().addItem(spare.toArray(ItemStack[]::new)).values()) {
+            player.getWorld().dropItemNaturally(player.getEyeLocation(), left);
+        }
+
+        return true;
     }
 
     private MenuButton removePreviewButton() {

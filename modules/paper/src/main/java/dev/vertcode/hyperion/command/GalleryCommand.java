@@ -13,7 +13,8 @@ import org.jspecify.annotations.Nullable;
 import dev.vertcode.hyperion.ui.Gallery;
 
 /**
- * {@code /hyperion gallery [filter] [--effects]}: browse every model, or every effect, in a menu.
+ * {@code /hyperion gallery [filter] [--effects] [--armor]}: browse every model, every effect or
+ * every armor set in a menu.
  */
 public final class GalleryCommand {
 
@@ -34,17 +35,24 @@ public final class GalleryCommand {
      * @param source the player
      * @param filter the text a model's key must contain, or null for every model
      * @param effects true to open the effects instead
+     * @param armor true to open the armor sets instead
      */
     @Command(HyperionCommands.ROOT + " gallery [filter]")
-    @CommandDescription("Browse, preview and spawn every model, or every effect with --effects")
+    @CommandDescription("Browse, preview and spawn every model, every effect with --effects, or every armor set with --armor")
     @Permission(HyperionPermissions.GALLERY)
     public void gallery(
             final PlayerSource source,
             @Argument("filter") @Greedy @FlagYielding final @Nullable String filter,
-            @Flag("effects") final boolean effects
+            @Flag("effects") final boolean effects,
+            @Flag("armor") final boolean armor
     ) {
         if (effects) {
             this.gallery.openEffects(source.source());
+            return;
+        }
+
+        if (armor) {
+            this.gallery.openArmor(source.source());
             return;
         }
 

@@ -86,6 +86,11 @@ public final class HyperionPermissions {
     public static final String GALLERY = "hyperion.command.gallery";
 
     /**
+     * List armor sets and give their pieces, through {@code /hyperion armor}.
+     */
+    public static final String ARMOR = "hyperion.command.armor";
+
+    /**
      * Open a model's menu by sneaking and right-clicking it.
      */
     public static final String MENU = "hyperion.menu";

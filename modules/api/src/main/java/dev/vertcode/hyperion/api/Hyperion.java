@@ -3,6 +3,7 @@ package dev.vertcode.hyperion.api;
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
+import dev.vertcode.hyperion.api.armor.ArmorRegistry;
 import dev.vertcode.hyperion.api.effect.EffectRegistry;
 import dev.vertcode.hyperion.api.model.ModelRegistry;
 import dev.vertcode.hyperion.api.model.ModelTracker;
@@ -91,6 +92,16 @@ public final class Hyperion {
      */
     public static EffectRegistry effects() {
         return api().effects();
+    }
+
+    /**
+     * Return the armor sets and what each player wears.
+     *
+     * @return the armor registry
+     * @throws IllegalStateException if Hyperion is not enabled
+     */
+    public static ArmorRegistry armor() {
+        return api().armor();
     }
 
     /**

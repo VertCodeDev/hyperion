@@ -2,6 +2,7 @@ package dev.vertcode.hyperion.api;
 
 import org.jetbrains.annotations.ApiStatus;
 
+import dev.vertcode.hyperion.api.armor.ArmorRegistry;
 import dev.vertcode.hyperion.api.effect.EffectRegistry;
 import dev.vertcode.hyperion.api.model.ModelRegistry;
 import dev.vertcode.hyperion.api.model.ModelTracker;
@@ -51,4 +52,11 @@ public interface HyperionApi {
      * @return the effect registry
      */
     EffectRegistry effects();
+
+    /**
+     * Return the armor sets and what each player wears.
+     *
+     * @return the armor registry
+     */
+    ArmorRegistry armor();
 }

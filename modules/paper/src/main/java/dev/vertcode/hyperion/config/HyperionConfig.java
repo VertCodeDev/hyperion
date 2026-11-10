@@ -30,6 +30,7 @@ import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
  * @param effects the effect settings
  * @param debug how the debug views draw
  * @param gallery the gallery settings
+ * @param armor how custom armor is drawn
  */
 public record HyperionConfig(
         PackSettings pack,
@@ -37,7 +38,8 @@ public record HyperionConfig(
         BedrockSettings bedrock,
         EffectSettings effects,
         DebugSettings debug,
-        GallerySettings gallery
+        GallerySettings gallery,
+        ArmorSettings armor
 ) {
 
     /**
@@ -68,6 +70,9 @@ public record HyperionConfig(
     private static final int DEFAULT_DEBUG_INTERVAL = 4;
     private static final float DEFAULT_AXIS_LENGTH = 0.4f;
     private static final int DEFAULT_PREVIEW_SECONDS = 120;
+    private static final int DEFAULT_ARMOR_DISTANCE = 32;
+    private static final int DEFAULT_MAX_LAYERS = 16;
+    private static final int MOST_LAYERS = 64;
 
     /**
      * Read {@code config.yml} from the data folder, writing or completing it from the jar first.
@@ -158,7 +163,15 @@ public record HyperionConfig(
         float multiplier = (float) Math.max(0d, config.getDouble("effects.particle-multiplier", 1d));
         EffectSettings effects = new EffectSettings(effectDistance, multiplier);
 
-        return new HyperionConfig(pack, models, bedrock, effects, debug(config, logger), gallery(config, logger));
+        return new HyperionConfig(
+                pack,
+                models,
+                bedrock,
+                effects,
+                debug(config, logger),
+                gallery(config, logger),
+                armor(config, logger)
+        );
     }
 
     /**
@@ -182,6 +195,29 @@ public record HyperionConfig(
         }
 
         return new DebugSettings(interval, config.getBoolean("debug.labels", true), axisLength);
+    }
+
+    /**
+     * Read how custom armor is drawn.
+     *
+     * @param config the contents of {@code config.yml}
+     * @param logger where unusable values are reported
+     * @return the settings
+     */
+    private static ArmorSettings armor(final ConfigurationSection config, final Logger logger) {
+        int distance = config.getInt("armor.render-distance", DEFAULT_ARMOR_DISTANCE);
+        if (distance < 1) {
+            logger.warning(String.format(BAD_VALUE, distance, "armor.render-distance", DEFAULT_ARMOR_DISTANCE));
+            distance = DEFAULT_ARMOR_DISTANCE;
+        }
+
+        int layers = config.getInt("armor.max-layers", DEFAULT_MAX_LAYERS);
+        if (layers < 1 || layers > MOST_LAYERS) {
+            logger.warning(String.format(BAD_VALUE, layers, "armor.max-layers", DEFAULT_MAX_LAYERS));
+            layers = DEFAULT_MAX_LAYERS;
+        }
+
+        return new ArmorSettings(config.getBoolean("armor.shader", false), distance, layers);
     }
 
     /**

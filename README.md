@@ -76,10 +76,11 @@ designed around that one goal:
 
 ### 🛡️ Armor
 
-- Custom armor sets from your own textures, worn in the vanilla armor slots.
-- Full 3D armor pieces from Blockbench models.
-- Works with the trims, enchant glint and dyes players already know.
-- Bound to items through data components, no custom model data juggling.
+- Custom armor sets from your own Blockbench models and textures, worn in the vanilla armor slots.
+- 3D helmets on every version, and 3D chestplates, leggings and boots through a core shader, with
+  a flat look wherever the shader cannot run.
+- Real armor items underneath, so enchanting, repairing and dyeing work as players expect.
+- Events for equipping, taking off and wearing a full set, to build set bonuses on.
 
 ### 🧩 For developers
 

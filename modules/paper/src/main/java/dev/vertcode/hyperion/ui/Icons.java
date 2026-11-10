@@ -42,6 +42,26 @@ final class Icons {
     }
 
     /**
+     * Put lines under a real item's own name, such as an armor piece shown with its model.
+     *
+     * @param item the item, changed in place
+     * @param lore the lines
+     * @return the item
+     */
+    static ItemStack withLore(final ItemStack item, final Component... lore) {
+        item.editMeta(meta -> {
+            List<Component> lines = new ArrayList<>(lore.length);
+            for (Component line : lore) {
+                lines.add(plain(line));
+            }
+
+            meta.lore(lines);
+        });
+
+        return item;
+    }
+
+    /**
      * Turn the italics off, which Minecraft turns on for custom names and lore.
      *
      * @param text the text

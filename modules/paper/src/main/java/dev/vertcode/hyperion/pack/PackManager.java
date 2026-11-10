@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 
 import net.kyori.adventure.resource.ResourcePackInfo;
@@ -35,6 +36,7 @@ import dev.vertcode.hyperion.blueprint.BlueprintRegistry;
 import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.PackHosting;
 import dev.vertcode.hyperion.config.PackSettings;
+import dev.vertcode.hyperion.pack.armor.ArmorBuild;
 
 /**
  * Build, host and send the resource pack.
@@ -75,6 +77,7 @@ public final class PackManager {
     private volatile @Nullable BedrockPack bedrock;
     private volatile boolean bedrockEnabled;
     private volatile Predicate<BoneBlueprint> hiddenBones = bone -> false;
+    private volatile Supplier<@Nullable ArmorBuild> armor = () -> null;
     private volatile Consumer<ResourcePack> builtListener = built -> {
     };
     private @Nullable PackServer server;
@@ -453,7 +456,16 @@ public final class PackManager {
             this.bedrock = BedrockPackBuilder.build(blueprints, this.hiddenBones);
         }
 
-        return PackBuilder.build(blueprints, this.settings, this.version, this.format);
+        return PackBuilder.build(blueprints, this.settings, this.version, this.format, this.armor.get());
+    }
+
+    /**
+     * Put armor sets in the pack from the next build on.
+     *
+     * @param sets gives the sets and settings at build time, or null for none
+     */
+    public void armor(final Supplier<@Nullable ArmorBuild> sets) {
+        this.armor = sets;
     }
 
     /**
