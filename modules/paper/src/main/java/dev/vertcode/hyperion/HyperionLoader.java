@@ -18,12 +18,14 @@ import org.eclipse.aether.repository.RemoteRepository;
 import dev.vertcode.hyperion.api.version.MinecraftVersion;
 
 /**
- * Has the server download the libraries Hyperion uses but does not ship: Cloud for the commands,
- * and InvUI for the menus, in the release that fits the server's version.
+ * Has the server download the one library Hyperion uses but does not ship: InvUI for the menus,
+ * in the release that fits the server's version.
  *
- * <p>Paper runs this before the plugin loads and caches the downloads in its {@code libraries}
- * folder, so only the first start needs the internet. The libraries live on the plugin's own
- * classpath, apart from any other plugin's copies. Adventure is left out: Paper has it.
+ * <p>Paper runs this before the plugin loads and caches the download in its {@code libraries}
+ * folder, so only the first start needs the internet. Cloud is not downloaded: it ships inside
+ * the jar, relocated, because a library here is visible to every plugin that depends on Hyperion
+ * and a second copy of Cloud on such a plugin's path breaks that plugin's own commands.
+ * Adventure is left out: Paper has it.
  */
 public final class HyperionLoader implements PluginLoader {
 
@@ -41,12 +43,6 @@ public final class HyperionLoader implements PluginLoader {
         MavenLibraryResolver resolver = new MavenLibraryResolver();
         resolver.addRepository(new RemoteRepository.Builder("central", "default", CENTRAL).build());
         resolver.addRepository(new RemoteRepository.Builder("xenondevs", "default", XENONDEVS).build());
-
-        String cloud = versions.getProperty("cloud");
-        String cloudMinecraft = versions.getProperty("cloudMinecraft");
-        resolver.addDependency(library("org.incendo:cloud-paper:" + cloudMinecraft));
-        resolver.addDependency(library("org.incendo:cloud-annotations:" + cloud));
-        resolver.addDependency(library("org.incendo:cloud-minecraft-extras:" + cloudMinecraft));
 
         for (String artifact : invui(server(), versions)) {
             resolver.addDependency(library(artifact));

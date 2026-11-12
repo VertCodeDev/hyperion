@@ -8,14 +8,16 @@ the [menu modules](../menu/README.md); its libraries are downloaded by the serve
 
 | Library | How it ships | What Hyperion uses it for |
 |---|---|---|
-| [Incendo Cloud](https://github.com/Incendo/cloud) | Downloaded on first start | The `/hyperion` commands, registered through Paper's Brigadier api |
+| [Incendo Cloud](https://github.com/Incendo/cloud) | Inside the jar, relocated | The `/hyperion` commands, registered through Paper's Brigadier api |
 | [InvUI](https://github.com/NichtStudioCode/InvUI) | Downloaded on first start, the release that fits the server | The menus |
 | [PacketEvents](https://github.com/retrooper/packetevents) | Separate plugin, required | Sending model packets, and editing the server's own packets to hide parts of an entity or add seats |
 | [PlaceholderAPI](https://github.com/PlaceholderAPI/PlaceholderAPI) | Separate plugin, optional | Filling its placeholders into effect texts |
 
-`HyperionLoader` runs before the plugin and has Paper download Cloud and InvUI into its
-`libraries` folder, so the first start needs internet access and later starts do not. Paper keeps
-them on Hyperion's own classpath, apart from other plugins' copies. InvUI 1.49 covers 1.21 to
+`HyperionLoader` runs before the plugin and has Paper download InvUI into its `libraries`
+folder, so the first start needs internet access and later starts do not. Cloud ships inside the
+jar under `dev.vertcode.hyperion.libs`: a library the loader downloads is visible to every plugin
+that depends on Hyperion, and a second `org.incendo.cloud` on such a plugin's path would break
+that plugin's own commands. InvUI 1.49 covers 1.21 to
 1.21.11 and each InvUI 2 release one 26.x line, so the loader picks the release by the server's
 version, and Hyperion loads the menu module made for it.
 
