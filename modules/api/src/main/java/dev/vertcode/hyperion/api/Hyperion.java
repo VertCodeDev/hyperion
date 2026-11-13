@@ -5,10 +5,12 @@ import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.armor.ArmorRegistry;
 import dev.vertcode.hyperion.api.effect.EffectRegistry;
+import dev.vertcode.hyperion.api.player.PlayerAnimations;
 import dev.vertcode.hyperion.api.model.ModelRegistry;
 import dev.vertcode.hyperion.api.model.ModelTracker;
 import dev.vertcode.hyperion.api.model.behavior.BehaviorRegistry;
 import dev.vertcode.hyperion.api.model.source.FormatRegistry;
+import dev.vertcode.hyperion.api.skin.SkinService;
 
 /**
  * The way into Hyperion from another plugin.
@@ -102,6 +104,26 @@ public final class Hyperion {
      */
     public static ArmorRegistry armor() {
         return api().armor();
+    }
+
+    /**
+     * Return the player skins models can wear.
+     *
+     * @return the skin service
+     * @throws IllegalStateException if Hyperion is not enabled
+     */
+    public static SkinService skins() {
+        return api().skins();
+    }
+
+    /**
+     * Return the way to play animations on players, in their own skin.
+     *
+     * @return the player animations
+     * @throws IllegalStateException if Hyperion is not enabled
+     */
+    public static PlayerAnimations playerAnimations() {
+        return api().playerAnimations();
     }
 
     /**

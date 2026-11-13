@@ -108,6 +108,14 @@ public interface ModelBlueprint extends Keyed {
     Metadata metadata();
 
     /**
+     * Return whether this is a player model: one with faces that use a texture named
+     * {@code player_skin}, which are drawn with the skin a live model wears.
+     *
+     * @return true when the blueprint has skin faces
+     */
+    boolean skinned();
+
+    /**
      * Return the box around every cube at rest, in blocks, relative to the model's origin.
      *
      * @return a copy of the bounding box

@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Unmodifiable;
+import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.animation.Animator;
 import dev.vertcode.hyperion.api.model.behavior.BoneBehavior;
@@ -21,6 +22,7 @@ import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.locator.Locator;
 import dev.vertcode.hyperion.api.model.view.PlayerView;
 import dev.vertcode.hyperion.api.model.view.Viewers;
+import dev.vertcode.hyperion.api.skin.Skin;
 
 /**
  * A blueprint brought to life in the world: on an entity or on its own.
@@ -227,6 +229,26 @@ public interface Model extends Appearance<Model> {
      *     the region that owns the model
      */
     void teleport(Location location);
+
+    /**
+     * Return the player skin this model wears on the faces that use a texture named
+     * {@code player_skin}.
+     *
+     * @return the skin, or empty while the model shows the skin texture of its own file
+     */
+    Optional<Skin> skin();
+
+    /**
+     * Change the player skin this model wears. A model on a player wears that player's skin by
+     * itself. Safe from any thread; viewers see it on the next frame.
+     *
+     * <p>Only a blueprint that is {@link ModelBlueprint#skinned() skinned} shows it, and only
+     * from Minecraft 1.21.4.
+     *
+     * @param skin the skin, or null to show the skin texture of the model's own file
+     * @return this model
+     */
+    Model skin(@Nullable Skin skin);
 
     /**
      * Return who sees this model.

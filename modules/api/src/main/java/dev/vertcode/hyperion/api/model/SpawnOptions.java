@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import dev.vertcode.hyperion.api.model.bone.BoneTransform;
 import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.view.ViewerPolicy;
+import dev.vertcode.hyperion.api.skin.Skin;
 
 /**
  * Settings for a model, applied before anyone sees it.
@@ -168,6 +169,15 @@ public interface SpawnOptions {
      * @return these options
      */
     SpawnOptions autoAnimations(boolean enabled);
+
+    /**
+     * Choose the player skin the model wears on the faces that use a texture named
+     * {@code player_skin}. A model on a player wears that player's skin when this is not set.
+     *
+     * @param skin the skin, or null for the default
+     * @return these options
+     */
+    SpawnOptions skin(@Nullable Skin skin);
 
     /**
      * Choose how players hit and click this model; {@code config.yml} sets the default.

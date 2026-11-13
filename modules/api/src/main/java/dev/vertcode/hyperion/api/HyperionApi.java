@@ -4,10 +4,12 @@ import org.jetbrains.annotations.ApiStatus;
 
 import dev.vertcode.hyperion.api.armor.ArmorRegistry;
 import dev.vertcode.hyperion.api.effect.EffectRegistry;
+import dev.vertcode.hyperion.api.player.PlayerAnimations;
 import dev.vertcode.hyperion.api.model.ModelRegistry;
 import dev.vertcode.hyperion.api.model.ModelTracker;
 import dev.vertcode.hyperion.api.model.behavior.BehaviorRegistry;
 import dev.vertcode.hyperion.api.model.source.FormatRegistry;
+import dev.vertcode.hyperion.api.skin.SkinService;
 
 /**
  * Everything Hyperion offers another plugin, behind one interface.
@@ -59,4 +61,18 @@ public interface HyperionApi {
      * @return the armor registry
      */
     ArmorRegistry armor();
+
+    /**
+     * Return the player skins models can wear.
+     *
+     * @return the skin service
+     */
+    SkinService skins();
+
+    /**
+     * Return the way to play animations on players, in their own skin.
+     *
+     * @return the player animations
+     */
+    PlayerAnimations playerAnimations();
 }
