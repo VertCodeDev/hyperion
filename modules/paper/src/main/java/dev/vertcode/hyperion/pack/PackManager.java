@@ -2,6 +2,7 @@ package dev.vertcode.hyperion.pack;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,6 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,6 +60,26 @@ public final class PackManager {
     private static final String BUILT = "Built the resource pack: %s, %d files in %d ms";
     private static final String SELF_HOSTED_LINK = "http://%s:%d/%s.zip";
     private static final String BUILD_FAILED = "Building the resource pack failed";
+    private static final String NEVER_REACHED = """
+            %s could not download the pack from %s, and no request from them reached the pack \
+            server. Port %d is not reachable at that address: open it in the firewall or the \
+            host's panel, or set pack.self-host.address to the public address of this machine, \
+            which is needed behind a proxy such as Velocity.""";
+    private static final String CUT_OFF = """
+            %s could not download the pack from %s, although the pack server sent it. The \
+            download was cut off, or something between them and this server changed the file.""";
+    private static final String STALE = """
+            %s could not download the pack from %s: the pack server answered %d, so the link was \
+            for an older pack. Run /hyperion pack send to offer the current one.""";
+    private static final String URL_FAILED = """
+            %s could not download the pack from %s. Check that the link downloads the zip itself, \
+            not a web page, and that the upload is the current pack: run /hyperion pack export \
+            and upload it again after every change.""";
+    private static final String NOT_RUNNING = """
+            %s could not download the pack from %s: the pack server is not running. The startup \
+            log says why, usually because port %d is in use.""";
+    private static final int SERVED = 200;
+    private static final char CLIENT_MARKER = '\0';
     private static final List<PlayerResourcePackStatusEvent.Status> FAILURES = List.of(
             PlayerResourcePackStatusEvent.Status.FAILED_DOWNLOAD,
             PlayerResourcePackStatusEvent.Status.INVALID_URL,
@@ -80,7 +102,7 @@ public final class PackManager {
     private volatile Supplier<@Nullable ArmorBuild> armor = () -> null;
     private volatile Consumer<ResourcePack> builtListener = built -> {
     };
-    private @Nullable PackServer server;
+    private volatile @Nullable PackServer server;
     private @Nullable CompletableFuture<ResourcePack> running;
     private @Nullable CompletableFuture<ResourcePack> queued;
 
@@ -377,8 +399,11 @@ public final class PackManager {
      * @param hostname the address as the client sent it, such as {@code play.example.com:25565}
      */
     public void rememberHost(final UUID player, final String hostname) {
-        int colon = hostname.lastIndexOf(':');
-        String host = colon > 0 ? hostname.substring(0, colon) : hostname;
+        // Modded clients append their own data after a NUL, such as "\0FML3\0"
+        int marker = hostname.indexOf(CLIENT_MARKER);
+        String address = marker >= 0 ? hostname.substring(0, marker) : hostname;
+        int colon = address.lastIndexOf(':');
+        String host = colon > 0 ? address.substring(0, colon) : address;
         if (!host.isBlank()) {
             this.hosts.put(player, host);
         }
@@ -401,6 +426,52 @@ public final class PackManager {
         boolean refused = status == PlayerResourcePackStatusEvent.Status.DECLINED || FAILURES.contains(status);
 
         return refused && this.settings.required();
+    }
+
+    /**
+     * Log why a player's download failed, so the console says what to fix: the port never reached,
+     * a download cut off, a stale link, or a bad uploaded link. Other statuses log nothing.
+     *
+     * @param player the player
+     * @param pack the id of the pack the status is about
+     * @param status the status the client reported
+     */
+    public void explain(final Player player, final UUID pack, final PlayerResourcePackStatusEvent.Status status) {
+        boolean failed = status == PlayerResourcePackStatusEvent.Status.FAILED_DOWNLOAD
+                || status == PlayerResourcePackStatusEvent.Status.INVALID_URL;
+        if (!PACK_ID.equals(pack) || !failed) {
+            return;
+        }
+
+        Optional<String> link = this.link(player);
+        if (link.isEmpty()) {
+            return;
+        }
+
+        String name = player.getName();
+        if (this.settings.hosting() != PackHosting.SELF_HOST) {
+            this.plugin.getLogger().warning(String.format(URL_FAILED, name, link.get()));
+            return;
+        }
+
+        PackServer running = this.server;
+        if (running == null) {
+            this.plugin.getLogger().warning(String.format(NOT_RUNNING, name, link.get(), this.settings.port()));
+            return;
+        }
+
+        InetSocketAddress address = player.getAddress();
+        OptionalInt answered = address == null ? OptionalInt.empty() : running.answered(address.getAddress());
+        String reason;
+        if (answered.isEmpty()) {
+            reason = String.format(NEVER_REACHED, name, link.get(), this.settings.port());
+        } else if (answered.getAsInt() == SERVED) {
+            reason = String.format(CUT_OFF, name, link.get());
+        } else {
+            reason = String.format(STALE, name, link.get(), answered.getAsInt());
+        }
+
+        this.plugin.getLogger().warning(reason);
     }
 
     /**

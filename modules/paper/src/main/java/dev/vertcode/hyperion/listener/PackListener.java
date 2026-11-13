@@ -52,13 +52,15 @@ public final class PackListener implements Listener {
     }
 
     /**
-     * Track the player's progress with the pack, and kick them when they refuse a required one.
+     * Track the player's progress with the pack, log why a download failed, and kick them when
+     * they refuse a required one.
      *
      * @param event the status update
      */
     @EventHandler
     public void onStatus(final PlayerResourcePackStatusEvent event) {
         Player player = event.getPlayer();
+        this.packs.explain(player, event.getID(), event.getStatus());
         if (this.packs.record(player.getUniqueId(), event.getID(), event.getStatus())) {
             player.kick(HyperionMessages.PACK__KICK.component());
         }
