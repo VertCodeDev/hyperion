@@ -40,11 +40,13 @@ import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessageBook;
 import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.effect.HyperionEffects;
+import dev.vertcode.hyperion.player.HyperionPlayerAnimations;
 import dev.vertcode.hyperion.listener.ArmorEquipListener;
 import dev.vertcode.hyperion.listener.ArmorListener;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
 import dev.vertcode.hyperion.listener.EffectListener;
+import dev.vertcode.hyperion.listener.PlayerAnimationListener;
 import dev.vertcode.hyperion.listener.HitboxListener;
 import dev.vertcode.hyperion.listener.ModelListener;
 import dev.vertcode.hyperion.listener.PackListener;
@@ -55,6 +57,7 @@ import dev.vertcode.hyperion.model.HyperionModelRegistry;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackFormat;
 import dev.vertcode.hyperion.pack.PackManager;
+import dev.vertcode.hyperion.skin.HyperionSkins;
 import dev.vertcode.hyperion.ui.Gallery;
 import dev.vertcode.hyperion.ui.Menus;
 import dev.vertcode.hyperion.ui.Previews;
@@ -66,6 +69,7 @@ public final class HyperionPlugin extends JavaPlugin {
     private static final String LINK_FAILED = "The Bedrock link could not start on port %d; is the port in use?";
     private static final String ARMOR_LOADED = "Loaded %d armor set(s)";
     private static final String ARMOR_TEMPLATE = "armor-template.bbmodel";
+    private static final String PLAYER_TEMPLATE = "player-template.bbmodel";
     private static final String CACHE = "cache";
 
     private @Nullable BlueprintRegistry registry;
@@ -77,6 +81,7 @@ public final class HyperionPlugin extends JavaPlugin {
     private @Nullable HyperionArmorRegistry armor;
     private @Nullable ArmorItems armorItems;
     private @Nullable ArmorTracker armorTracker;
+    private @Nullable HyperionPlayerAnimations playerAnimations;
     private List<PacketListenerCommon> packetListeners = List.of();
     private @Nullable BedrockLink bedrockLink;
 
@@ -123,6 +128,13 @@ public final class HyperionPlugin extends JavaPlugin {
         registry.useSpawner(models);
         this.models = models;
 
+        // Skins and animations on players
+        HyperionSkins skins = new HyperionSkins(Feature.ITEM_MODEL_DEFINITIONS.availableOn(version), async, this.getLogger());
+        models.skins(skins);
+        HyperionPlayerAnimations playerAnimations = new HyperionPlayerAnimations(this, models, registry, config.playerAnimations());
+        this.playerAnimations = playerAnimations;
+        this.savePlayerTemplate();
+
         // Armor
         ArmorItems armorItems = new ArmorItems(version, config.pack().baseItem());
         HyperionArmorRegistry armor = new HyperionArmorRegistry(
@@ -152,7 +164,7 @@ public final class HyperionPlugin extends JavaPlugin {
 
         // Api
         HyperionModelRegistry modelRegistry = new HyperionModelRegistry(registry, models, packs);
-        Hyperion.install(new HyperionService(modelRegistry, models, behaviors, formats, effects, armor));
+        Hyperion.install(new HyperionService(modelRegistry, models, behaviors, formats, effects, armor, skins, playerAnimations));
         registry.reloadAll()
                 .whenComplete(this::logLoad)
                 .thenApply(result -> {
@@ -173,6 +185,7 @@ public final class HyperionPlugin extends JavaPlugin {
         events.registerEvents(new EffectListener(effects.cameras()), this);
         events.registerEvents(new StaffToolListener(debug, previews), this);
         events.registerEvents(new ArmorListener(armorTracker), this);
+        events.registerEvents(new PlayerAnimationListener(playerAnimations, skins, registry), this);
         events.registerEvents(new ArmorEquipListener(armor, armorTracker, events, !Feature.EQUIPPABLE.availableOn(version)), this);
         EventManager packets = PacketEvents.getAPI().getEventManager();
         this.packetListeners = List.of(
@@ -183,7 +196,7 @@ public final class HyperionPlugin extends JavaPlugin {
 
         // Commands
         Gallery gallery = new Gallery(this, registry, models, effects, previews, menus, armor);
-        HyperionCommands.register(this, registry, packs, models, effects, debug, gallery, armor);
+        HyperionCommands.register(this, registry, packs, models, effects, debug, gallery, armor, playerAnimations, skins);
     }
 
     @Override
@@ -195,6 +208,10 @@ public final class HyperionPlugin extends JavaPlugin {
 
         if (this.previews != null) {
             this.previews.clearAll();
+        }
+
+        if (this.playerAnimations != null) {
+            this.playerAnimations.stopAll();
         }
 
         if (this.models != null) {
@@ -250,6 +267,10 @@ public final class HyperionPlugin extends JavaPlugin {
             this.previews.configure(config.gallery());
         }
 
+        if (this.playerAnimations != null) {
+            this.playerAnimations.configure(config.playerAnimations());
+        }
+
         if (this.armor != null && this.armorItems != null) {
             this.armor.configure(config.armor());
             this.armorItems.baseItem(config.pack().baseItem());
@@ -274,6 +295,20 @@ public final class HyperionPlugin extends JavaPlugin {
         this.getServer().getAsyncScheduler().runNow(this, task -> this.getServer().getPluginManager()
                 .callEvent(new ArmorLoadEvent(published)));
         tracker.recheck(this, this.getServer().getOnlinePlayers());
+    }
+
+    /**
+     * Put the Blockbench template of a player model in the data folder on first start. It is a
+     * ready player rig to animate; copy it into {@code models/} to use it.
+     */
+    private void savePlayerTemplate() {
+        try {
+            if (!Files.exists(this.getDataPath().resolve(PLAYER_TEMPLATE))) {
+                this.saveResource(PLAYER_TEMPLATE, false);
+            }
+        } catch (IllegalArgumentException exception) {
+            this.getLogger().log(Level.WARNING, "Could not save the player model template", exception);
+        }
     }
 
     /**

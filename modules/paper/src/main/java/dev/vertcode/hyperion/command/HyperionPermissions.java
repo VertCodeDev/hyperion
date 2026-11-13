@@ -91,6 +91,16 @@ public final class HyperionPermissions {
     public static final String ARMOR = "hyperion.command.armor";
 
     /**
+     * Play and stop animations on yourself, through {@code /hyperion player}.
+     */
+    public static final String PLAYER = "hyperion.command.player";
+
+    /**
+     * Play and stop animations on other players, through {@code /hyperion player}.
+     */
+    public static final String PLAYER_OTHERS = "hyperion.command.player.others";
+
+    /**
      * Open a model's menu by sneaking and right-clicking it.
      */
     public static final String MENU = "hyperion.menu";

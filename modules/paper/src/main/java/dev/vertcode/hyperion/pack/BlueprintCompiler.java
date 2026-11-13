@@ -1,5 +1,9 @@
 package dev.vertcode.hyperion.pack;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -9,6 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntSupplier;
 import java.util.regex.Pattern;
+
+import javax.imageio.ImageIO;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -24,6 +30,10 @@ import dev.vertcode.hyperion.blueprint.data.Cube;
 import dev.vertcode.hyperion.blueprint.data.CubeFace;
 import dev.vertcode.hyperion.blueprint.data.FaceSide;
 import dev.vertcode.hyperion.blueprint.data.Texture;
+import dev.vertcode.hyperion.skin.SkinMap;
+import dev.vertcode.hyperion.skin.SkinPixel;
+import dev.vertcode.hyperion.skin.SkinTextures;
+import dev.vertcode.hyperion.skin.SkinVariant;
 
 /**
  * Write one blueprint into a pack: its textures, one item model per bone, and the parts each
@@ -34,6 +44,10 @@ import dev.vertcode.hyperion.blueprint.data.Texture;
  * and its part scaled back up, and a cube turned any other way becomes a part of its own, turned
  * by the display. Those limits are the ones 1.21 has, so the result renders the same on every
  * supported version.
+ *
+ * <p>From 1.21.4, a face that uses the blueprint's skin texture is not drawn from that texture:
+ * it is cut into one white square per skin pixel, which the item colors with a player's skin.
+ * See {@link SkinFaces}. On an older server such a face shows the texture of the file.
  */
 final class BlueprintCompiler {
 
@@ -44,6 +58,13 @@ final class BlueprintCompiler {
     private static final float[] ITEM_ANGLES = {-45f, -22.5f, 22.5f, 45f};
     private static final String[] AXES = {"x", "y", "z"};
     private static final Pattern UNSAFE = Pattern.compile("[^a-z0-9_.-]");
+    private static final String PIXEL_KEY = "skin_pixel";
+    private static final String PIXEL_TEXTURE = "hyperion:item/skin_pixel";
+    private static final String PIXEL_PATH = "assets/hyperion/textures/item/skin_pixel.png";
+    private static final String PIXEL_SUFFIX = "_px";
+    private static final int PIXEL_SIZE = 16;
+    private static final int WHITE = 0xFFFFFFFF;
+    private static final int FULL_UV = 16;
 
     private final Blueprint blueprint;
     private final PackWriter writer;
@@ -52,6 +73,7 @@ final class BlueprintCompiler {
     private final List<ModelOverride> overrides;
     private final String namespace;
     private final String folder;
+    private final int skinTexture;
     private final JsonObject textures = new JsonObject();
     private final Set<String> names = new HashSet<>();
 
@@ -78,6 +100,7 @@ final class BlueprintCompiler {
         this.overrides = overrides;
         this.namespace = blueprint.key().namespace();
         this.folder = blueprint.key().value();
+        this.skinTexture = itemDefinitions ? blueprint.skinTexture() : SkinTextures.NONE;
     }
 
     /**
@@ -87,6 +110,9 @@ final class BlueprintCompiler {
      */
     Map<String, List<ModelPart>> compile() {
         this.writeTextures();
+        if (this.skinTexture != SkinTextures.NONE) {
+            this.writer.bytes(PIXEL_PATH, whitePixel());
+        }
 
         Map<String, List<ModelPart>> parts = new LinkedHashMap<>();
         for (BlueprintBone bone : this.blueprint.blueprintBones()) {
@@ -105,7 +131,7 @@ final class BlueprintCompiler {
         List<Texture> all = this.blueprint.textures();
         for (int index = 0; index < all.size(); index++) {
             Texture texture = all.get(index);
-            if (texture.png().length == 0) {
+            if (texture.png().length == 0 || index == this.skinTexture) {
                 continue;
             }
 
@@ -138,9 +164,10 @@ final class BlueprintCompiler {
             (fitsItemModel(cube.rotation()) ? together : apart).add(cube);
         }
 
+        SkinVariant variant = SkinVariant.ofName(bone.name());
         List<ModelPart> parts = new ArrayList<>();
         if (!together.isEmpty()) {
-            parts.add(this.part(name, together, pivot, true, new Vector3f(), new Quaternionf()));
+            parts.add(this.part(name, together, pivot, true, new Vector3f(), new Quaternionf(), variant));
         }
 
         for (int i = 0; i < apart.size(); i++) {
@@ -148,7 +175,7 @@ final class BlueprintCompiler {
             Vector3f offset = new Vector3f(cube.origin()).sub(pivot).div(PIXELS_PER_BLOCK);
             Quaternionf rotation = BlockbenchRotation.of(cube.rotation());
             String partName = this.unique(name + "_" + (i + 1));
-            parts.add(this.part(partName, List.of(cube), cube.origin(), false, offset, rotation));
+            parts.add(this.part(partName, List.of(cube), cube.origin(), false, offset, rotation, variant));
         }
 
         return parts;
@@ -164,6 +191,7 @@ final class BlueprintCompiler {
      *     the part instead
      * @param offset where the part sits from the bone's pivot, in blocks
      * @param rotation how the display turns the part
+     * @param variant which skins the bone is drawn for, for its skin faces
      * @return the part
      */
     private ModelPart part(
@@ -172,30 +200,212 @@ final class BlueprintCompiler {
             final Vector3fc origin,
             final boolean keepRotation,
             final Vector3fc offset,
-            final Quaternionfc rotation
+            final Quaternionfc rotation,
+            final SkinVariant variant
     ) {
         float shrink = shrink(cubes, origin);
         JsonArray elements = new JsonArray();
+        List<SkinPixel> solid = new ArrayList<>();
+        List<SkinQuad> optional = new ArrayList<>();
         for (Cube cube : cubes) {
-            elements.add(this.element(cube, origin, shrink, keepRotation));
+            JsonObject element = this.element(cube, origin, shrink, keepRotation);
+            if (this.skinTexture == SkinTextures.NONE || !element.getAsJsonObject("faces").isEmpty()) {
+                elements.add(element);
+            }
+
+            for (SkinQuad quad : this.skinQuads(cube, variant)) {
+                if (quad.optional()) {
+                    optional.add(quad);
+                    continue;
+                }
+
+                // Tint 0 is the dye color every part has; the skin's colors follow it.
+                solid.add(quad.pixel());
+                elements.add(pixelElement(quad, cube, origin, shrink, keepRotation, solid.size()));
+            }
+        }
+
+        JsonObject textures = this.textures.deepCopy();
+        if (!solid.isEmpty()) {
+            textures.addProperty(PIXEL_KEY, PIXEL_TEXTURE);
         }
 
         JsonObject model = new JsonObject();
-        model.add("textures", this.textures.deepCopy());
+        model.add("textures", textures);
         model.add("elements", elements);
         String id = this.namespace + ":" + this.folder + "/" + name;
         this.writer.json("assets/" + this.namespace + "/models/" + this.folder + "/" + name + ".json", model);
 
         int number = 0;
         if (this.itemDefinitions) {
+            JsonArray pixels = this.pixelModels(name, optional, cubes, origin, shrink, keepRotation, solid.size());
             String path = "assets/" + this.namespace + "/items/" + this.folder + "/" + name + ".json";
-            this.writer.json(path, definition(id));
+            this.writer.json(path, definition(id, solid.size(), pixels));
         } else {
             number = this.customModelData.getAsInt();
             this.overrides.add(new ModelOverride(number, id));
         }
 
-        return new ModelPart(id, number, offset, rotation, 1f / shrink);
+        SkinMap skin = solid.isEmpty() && optional.isEmpty()
+                ? null
+                : new SkinMap(solid, optional.stream().map(SkinQuad::pixel).toList());
+
+        return new ModelPart(id, number, offset, rotation, 1f / shrink, skin);
+    }
+
+    /**
+     * Cut the faces of a cube that use the skin texture into their skin pixels.
+     *
+     * @param cube the cube
+     * @param bone which skins the cube's bone is drawn for
+     * @return the squares, empty when the blueprint has no skin texture or the cube does not
+     *     use it
+     */
+    private List<SkinQuad> skinQuads(final Cube cube, final SkinVariant bone) {
+        if (this.skinTexture == SkinTextures.NONE) {
+            return List.of();
+        }
+
+        SkinVariant own = SkinVariant.ofName(cube.name());
+        SkinVariant variant = own != SkinVariant.ANY ? own : bone;
+        Texture texture = this.blueprint.textures().get(this.skinTexture);
+        List<SkinQuad> quads = new ArrayList<>();
+        for (FaceSide side : FaceSide.values()) {
+            CubeFace face = cube.faces().get(side);
+            if (face != null && face.texture() == this.skinTexture) {
+                SkinFaces.cut(cube, side, face, texture.uvWidth(), texture.uvHeight(), variant, quads);
+            }
+        }
+
+        return quads;
+    }
+
+    /**
+     * Write a model for every skin pixel that is drawn only for some skins, and describe how
+     * the item picks them: each is shown when its flag is set, colored by its own color.
+     *
+     * @param name the part's file name
+     * @param quads the pixels
+     * @param cubes the part's cubes, to find the cube a pixel belongs to
+     * @param origin the point in the model's center, in pixels
+     * @param shrink how much the model is shrunk to fit
+     * @param keepRotation whether the cubes keep their own rotation
+     * @param firstColor the number of the first pixel's color, after the always drawn ones
+     * @return the entries for the item definition
+     */
+    private JsonArray pixelModels(
+            final String name,
+            final List<SkinQuad> quads,
+            final List<Cube> cubes,
+            final Vector3fc origin,
+            final float shrink,
+            final boolean keepRotation,
+            final int firstColor
+    ) {
+        JsonObject textures = new JsonObject();
+        textures.addProperty(PIXEL_KEY, PIXEL_TEXTURE);
+        JsonArray entries = new JsonArray();
+        for (int flag = 0; flag < quads.size(); flag++) {
+            SkinQuad quad = quads.get(flag);
+            JsonArray elements = new JsonArray();
+            elements.add(pixelElement(quad, cubeOf(quad, cubes), origin, shrink, keepRotation, 0));
+            JsonObject model = new JsonObject();
+            model.add("textures", textures.deepCopy());
+            model.add("elements", elements);
+            String file = name + PIXEL_SUFFIX + flag;
+            this.writer.json("assets/" + this.namespace + "/models/" + this.folder + "/" + file + ".json", model);
+
+            JsonArray tints = new JsonArray();
+            tints.add(colorTint(firstColor + flag));
+            JsonObject shown = new JsonObject();
+            shown.addProperty("type", "minecraft:model");
+            shown.addProperty("model", this.namespace + ":" + this.folder + "/" + file);
+            shown.add("tints", tints);
+            JsonObject absent = new JsonObject();
+            absent.addProperty("type", "minecraft:empty");
+            JsonObject entry = new JsonObject();
+            entry.addProperty("type", "minecraft:condition");
+            entry.addProperty("property", "minecraft:custom_model_data");
+            entry.addProperty("index", flag);
+            entry.add("on_true", shown);
+            entry.add("on_false", absent);
+            entries.add(entry);
+        }
+
+        return entries;
+    }
+
+    /**
+     * Find the cube a skin pixel was cut from. A part's pixels are few and its cubes fewer, so
+     * a plain search is enough.
+     *
+     * @param quad the pixel
+     * @param cubes the part's cubes
+     * @return the cube
+     */
+    private static Cube cubeOf(final SkinQuad quad, final List<Cube> cubes) {
+        for (Cube cube : cubes) {
+            float inflate = cube.inflate() + ANGLE_EPSILON;
+            boolean inside = true;
+            for (int axis = 0; axis < 3; axis++) {
+                inside &= quad.from().get(axis) >= cube.from().get(axis) - inflate
+                        && quad.to().get(axis) <= cube.to().get(axis) + inflate;
+            }
+
+            if (inside) {
+                return cube;
+            }
+        }
+
+        return cubes.getFirst();
+    }
+
+    /**
+     * Write one skin pixel as an item model element: a flat white square with one face, colored
+     * by a tint.
+     *
+     * @param quad the pixel
+     * @param cube the cube it was cut from, whose rotation it follows
+     * @param origin the point in the model's center, in pixels
+     * @param shrink how much the model is shrunk to fit
+     * @param keepRotation whether to write the cube's rotation
+     * @param tint the number of the tint that colors it
+     * @return the element
+     */
+    private static JsonObject pixelElement(
+            final SkinQuad quad,
+            final Cube cube,
+            final Vector3fc origin,
+            final float shrink,
+            final boolean keepRotation,
+            final int tint
+    ) {
+        JsonObject element = new JsonObject();
+        element.add("from", position(quad.from(), origin, shrink));
+        element.add("to", position(quad.to(), origin, shrink));
+        int axis = turnedAxis(cube.rotation());
+        if (keepRotation && axis >= 0) {
+            JsonObject turn = new JsonObject();
+            turn.addProperty("angle", cube.rotation().get(axis));
+            turn.addProperty("axis", AXES[axis]);
+            turn.add("origin", position(cube.origin(), origin, shrink));
+            element.add("rotation", turn);
+        }
+
+        JsonArray uv = new JsonArray();
+        uv.add(0);
+        uv.add(0);
+        uv.add(FULL_UV);
+        uv.add(FULL_UV);
+        JsonObject face = new JsonObject();
+        face.add("uv", uv);
+        face.addProperty("texture", "#" + PIXEL_KEY);
+        face.addProperty("tintindex", tint);
+        JsonObject faces = new JsonObject();
+        faces.add(quad.side().key(), face);
+        element.add("faces", faces);
+
+        return element;
     }
 
     /**
@@ -230,7 +440,8 @@ final class BlueprintCompiler {
         JsonObject faces = new JsonObject();
         for (FaceSide side : FaceSide.values()) {
             CubeFace face = cube.faces().get(side);
-            if (face != null && face.textured() && this.textures.has(String.valueOf(face.texture()))) {
+            if (face != null && face.textured() && face.texture() != this.skinTexture
+                    && this.textures.has(String.valueOf(face.texture()))) {
                 faces.add(side.key(), this.face(face));
             }
         }
@@ -373,17 +584,24 @@ final class BlueprintCompiler {
     }
 
     /**
-     * Write an item definition that draws a model, tinted by the item's dye color.
+     * Write an item definition that draws a model, tinted by the item's dye color, with the
+     * skin pixels of a player model on top.
      *
      * @param model the model's id
+     * @param solid how many skin pixels the model itself draws, each colored by its own tint
+     * @param pixels the entries of the skin pixels drawn only for some skins, see
+     *     {@link #pixelModels}
      * @return the definition
      */
-    private static JsonObject definition(final String model) {
+    private static JsonObject definition(final String model, final int solid, final JsonArray pixels) {
         JsonObject tint = new JsonObject();
         tint.addProperty("type", "minecraft:dye");
         tint.addProperty("default", -1);
         JsonArray tints = new JsonArray();
         tints.add(tint);
+        for (int color = 0; color < solid; color++) {
+            tints.add(colorTint(color));
+        }
 
         JsonObject drawn = new JsonObject();
         drawn.addProperty("type", "minecraft:model");
@@ -391,9 +609,58 @@ final class BlueprintCompiler {
         drawn.add("tints", tints);
 
         JsonObject definition = new JsonObject();
-        definition.add("model", drawn);
+        if (pixels.isEmpty()) {
+            definition.add("model", drawn);
+            return definition;
+        }
+
+        JsonArray models = new JsonArray();
+        models.add(drawn);
+        models.addAll(pixels);
+        JsonObject composite = new JsonObject();
+        composite.addProperty("type", "minecraft:composite");
+        composite.add("models", models);
+        definition.add("model", composite);
 
         return definition;
+    }
+
+    /**
+     * Write a tint that takes one of the colors the item carries.
+     *
+     * @param index the color's number in the item's custom model data
+     * @return the tint
+     */
+    private static JsonObject colorTint(final int index) {
+        JsonObject tint = new JsonObject();
+        tint.addProperty("type", "minecraft:custom_model_data");
+        tint.addProperty("index", index);
+        tint.addProperty("default", -1);
+
+        return tint;
+    }
+
+    /**
+     * Make the texture every skin pixel is drawn with: plain white, for the tint to color.
+     *
+     * @return the texture as a PNG
+     */
+    private static byte[] whitePixel() {
+        BufferedImage image = new BufferedImage(PIXEL_SIZE, PIXEL_SIZE, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < PIXEL_SIZE; y++) {
+            for (int x = 0; x < PIXEL_SIZE; x++) {
+                image.setRGB(x, y, WHITE);
+            }
+        }
+
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try {
+            ImageIO.write(image, "png", bytes);
+        } catch (IOException exception) {
+            throw new UncheckedIOException(exception);
+        }
+
+        return bytes.toByteArray();
     }
 
     /**

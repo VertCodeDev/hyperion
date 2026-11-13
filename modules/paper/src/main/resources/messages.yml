@@ -133,6 +133,16 @@ animate:
   no-model: "<prefix><error>No model within <radius> blocks."
   no-animation: "<prefix><error><model> has no animation named '<animation>'."
 
+# /hy player
+player:
+  playing: "<prefix><text>Playing <highlight><animation></highlight> on <highlight><player></highlight>."
+  stopped: "<prefix><text>Stopped the animation on <highlight><player></highlight>."
+  none: "<prefix><muted>No animation is playing on <player>."
+  no-animation: "<prefix><error><model> has no animation named '<animation>'."
+  no-skins: "<prefix><muted>This server is older than 1.21.4, so the model shows the skin of its file, not the player's."
+  cancelled: "<prefix><error>Another plugin stopped the animation from playing."
+  failed: "<prefix><error>The animation could not be played: <reason>"
+
 # /hy effect
 effect:
   playing: "<prefix><text>Playing <highlight><effect></highlight> <target>."

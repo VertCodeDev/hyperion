@@ -14,6 +14,7 @@ import dev.vertcode.hyperion.api.model.bone.BoneTransform;
 import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.view.ViewerPolicy;
 import dev.vertcode.hyperion.blueprint.Blueprint;
+import dev.vertcode.hyperion.api.skin.Skin;
 
 /**
  * The settings a caller gives a model before it spawns, starting from {@code config.yml}.
@@ -44,6 +45,8 @@ final class ModelOptions implements SpawnOptions {
     @Nullable String animation;
     @Nullable Boolean autoAnimations;
     @Nullable HitboxMode hitboxMode;
+    @Nullable Skin skin;
+    boolean selfView;
 
     /**
      * Start from the defaults.
@@ -197,6 +200,13 @@ final class ModelOptions implements SpawnOptions {
     @Override
     public SpawnOptions autoAnimations(final boolean enabled) {
         this.autoAnimations = enabled;
+
+        return this;
+    }
+
+    @Override
+    public SpawnOptions skin(final @Nullable Skin skin) {
+        this.skin = skin;
 
         return this;
     }

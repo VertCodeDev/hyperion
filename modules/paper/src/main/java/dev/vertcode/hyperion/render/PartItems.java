@@ -1,8 +1,11 @@
 package dev.vertcode.hyperion.render;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import com.github.retrooper.packetevents.protocol.component.ComponentTypes;
+import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemCustomModelData;
 import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemDyeColor;
 import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemModel;
 import com.github.retrooper.packetevents.protocol.item.ItemStack;
@@ -14,6 +17,9 @@ import org.bukkit.Color;
 import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.pack.ModelPart;
+import dev.vertcode.hyperion.skin.HyperionSkin;
+import dev.vertcode.hyperion.skin.SkinColors;
+import dev.vertcode.hyperion.skin.SkinMap;
 
 /**
  * Build the items displays show: a model part on the base item, or an item a bone was given.
@@ -21,6 +27,9 @@ import dev.vertcode.hyperion.pack.ModelPart;
  * <p>From 1.21.4 a part names its model through the {@code item_model} component; before, it
  * picks it with custom model data. The tint is the dye color, which the pack's item definitions
  * apply to any base item from 1.21.4 and only dyeable base items show before.
+ *
+ * <p>A part of a player model also carries the colors of the skin the model wears, one for each
+ * skin pixel the part shows.
  */
 public final class PartItems {
 
@@ -46,9 +55,10 @@ public final class PartItems {
      *
      * @param part the part
      * @param look how the part looks
+     * @param skin the skin the model wears, or null when it wears none
      * @return the item, {@link ItemStack#EMPTY} when the part is hidden
      */
-    public ItemStack part(final ModelPart part, final DisplayLook look) {
+    public ItemStack part(final ModelPart part, final DisplayLook look, final @Nullable HyperionSkin skin) {
         if (!look.visible()) {
             return ItemStack.EMPTY;
         }
@@ -56,6 +66,10 @@ public final class PartItems {
         ItemStack item = ItemStack.builder().type(this.base).amount(1).build();
         if (this.itemModels) {
             item.setComponent(ComponentTypes.ITEM_MODEL, new ItemModel(new ResourceLocation(part.model())));
+            SkinMap pixels = part.skin();
+            if (pixels != null && skin != null) {
+                item.setComponent(ComponentTypes.CUSTOM_MODEL_DATA_LISTS, modelData(skin.colors(pixels)));
+            }
         } else {
             item.setComponent(ComponentTypes.CUSTOM_MODEL_DATA, part.customModelData());
         }
@@ -70,6 +84,22 @@ public final class PartItems {
         }
 
         return item;
+    }
+
+    /**
+     * Turn the colors of a skin on a part into the component that carries them.
+     *
+     * @param colors the colors and flags
+     * @return the custom model data
+     */
+    private static ItemCustomModelData modelData(final SkinColors colors) {
+        // PacketEvents has a Color of its own; Bukkit's is imported for the tint.
+        List<com.github.retrooper.packetevents.protocol.color.Color> list = new ArrayList<>(colors.colors().size());
+        for (int argb : colors.colors()) {
+            list.add(new com.github.retrooper.packetevents.protocol.color.Color(argb));
+        }
+
+        return new ItemCustomModelData(List.of(), colors.flags(), List.of(), list);
     }
 
     /**

@@ -41,6 +41,33 @@ public final class Fixtures {
     }
 
     /**
+     * Read a model file the plugin ships in its jar and build its blueprint.
+     *
+     * @param resource the file's name in the jar, such as {@code player-template.bbmodel}
+     * @param name the name to register it under
+     * @param report where problems are written
+     * @return the blueprint
+     * @throws IOException if the file cannot be read
+     */
+    public static Blueprint shipped(final String resource, final String name, final LoadReport report) throws IOException {
+        URL url = Fixtures.class.getResource("/" + resource);
+        if (url == null) {
+            throw new IllegalArgumentException("The jar has no " + resource);
+        }
+
+        Path path;
+        try {
+            path = Path.of(url.toURI());
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException(exception);
+        }
+
+        ModelData data = BbmodelReader.read(new BbmodelFormat().read(new FileSource(path)), report);
+
+        return BlueprintFactory.build(Key.key("hyperion", name), null, 1, new FileSource(path), data, report, ModelSpawner.UNAVAILABLE);
+    }
+
+    /**
      * Read a fixture into model data.
      *
      * @param name the file name without the extension

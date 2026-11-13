@@ -4,6 +4,9 @@ import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+import org.jspecify.annotations.Nullable;
+
+import dev.vertcode.hyperion.skin.SkinMap;
 
 /**
  * One item model a bone is drawn with, and how to place it relative to the bone.
@@ -19,8 +22,16 @@ import org.joml.Vector3fc;
  * @param offset where the part's origin sits from the bone's pivot, in blocks
  * @param rotation how the part is turned
  * @param scale how much the display scales the part up, 1 when it was not shrunk
+ * @param skin the skin pixels the part shows, or null when it shows none
  */
-public record ModelPart(String model, int customModelData, Vector3fc offset, Quaternionfc rotation, float scale) {
+public record ModelPart(
+        String model,
+        int customModelData,
+        Vector3fc offset,
+        Quaternionfc rotation,
+        float scale,
+        @Nullable SkinMap skin
+) {
 
     /**
      * Copy the offset and rotation, so a part never changes after it is built.
@@ -28,5 +39,24 @@ public record ModelPart(String model, int customModelData, Vector3fc offset, Qua
     public ModelPart {
         offset = new Vector3f(offset);
         rotation = new Quaternionf(rotation);
+    }
+
+    /**
+     * Describe a part that shows no skin.
+     *
+     * @param model the item model's id
+     * @param customModelData the number that picks this model on 1.21 to 1.21.3
+     * @param offset where the part's origin sits from the bone's pivot, in blocks
+     * @param rotation how the part is turned
+     * @param scale how much the display scales the part up
+     */
+    public ModelPart(
+            final String model,
+            final int customModelData,
+            final Vector3fc offset,
+            final Quaternionfc rotation,
+            final float scale
+    ) {
+        this(model, customModelData, offset, rotation, scale, null);
     }
 }

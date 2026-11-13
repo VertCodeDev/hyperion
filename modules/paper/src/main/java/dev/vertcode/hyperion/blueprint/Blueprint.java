@@ -30,6 +30,8 @@ import dev.vertcode.hyperion.api.model.source.ModelSource;
 import dev.vertcode.hyperion.blueprint.data.Animation;
 import dev.vertcode.hyperion.blueprint.data.ModelData;
 import dev.vertcode.hyperion.blueprint.data.Texture;
+import dev.vertcode.hyperion.skin.HyperionSkin;
+import dev.vertcode.hyperion.skin.SkinTextures;
 
 /**
  * A loaded model: the bone tree, locators, textures and animations of one Blockbench file.
@@ -59,6 +61,8 @@ public final class Blueprint implements ModelBlueprint {
     private final BoundingBox boundingBox;
     private final LoadReport report;
     private final ModelSpawner spawner;
+    private final int skinTexture;
+    private volatile @Nullable HyperionSkin fileSkin;
 
     /**
      * Create a blueprint. Only {@link BlueprintFactory} calls this.
@@ -113,6 +117,7 @@ public final class Blueprint implements ModelBlueprint {
         this.boundingBox = boundingBox.clone();
         this.report = report;
         this.spawner = spawner;
+        this.skinTexture = SkinTextures.find(data.textures(), this.bones);
     }
 
     /**
@@ -260,6 +265,41 @@ public final class Blueprint implements ModelBlueprint {
      */
     public List<Texture> textures() {
         return this.data.textures();
+    }
+
+    @Override
+    public boolean skinned() {
+        return this.skinTexture != SkinTextures.NONE;
+    }
+
+    /**
+     * Return which texture is the skin: the one named {@code player_skin}, whose faces are drawn with
+     * a player's skin.
+     *
+     * @return the texture's index, or {@link SkinTextures#NONE} when no face uses one
+     */
+    public int skinTexture() {
+        return this.skinTexture;
+    }
+
+    /**
+     * Return the image of the skin texture as a skin, which a model wears until it is given
+     * another. Read on first use.
+     *
+     * @return the file's own skin, or null when the blueprint is not a player model
+     */
+    public @Nullable HyperionSkin fileSkin() {
+        if (this.skinTexture == SkinTextures.NONE) {
+            return null;
+        }
+
+        HyperionSkin known = this.fileSkin;
+        if (known == null) {
+            known = SkinTextures.fileSkin(this.data.textures().get(this.skinTexture));
+            this.fileSkin = known;
+        }
+
+        return known;
     }
 
     /**

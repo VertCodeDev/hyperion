@@ -50,6 +50,7 @@ import dev.vertcode.hyperion.config.PackSettings;
 import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.pack.ResourcePack;
 import dev.vertcode.hyperion.render.PartItems;
+import dev.vertcode.hyperion.skin.HyperionSkins;
 
 /**
  * Spawns models, keeps track of every live one, and follows reloads.
@@ -78,6 +79,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
     private volatile ModelEffects effects = ModelEffects.NONE;
     private volatile ModelSettings settings;
     private volatile PartItems items;
+    private volatile @Nullable HyperionSkins skins;
     private volatile String baseItem;
     private volatile @Nullable ResourcePack pack;
     private BedrockPlayers bedrockPlayers = new BedrockPlayers();
@@ -164,6 +166,26 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
 
     @Override
     public Model spawn(final Blueprint blueprint, final ModelAnchor anchor, final Consumer<SpawnOptions> options) {
+        return this.spawn(blueprint, anchor, options, false);
+    }
+
+    /**
+     * Spawn a model, as {@link #spawn(Blueprint, ModelAnchor, Consumer)} does, choosing whether
+     * a player carrying it sees it too. A player never tracks themselves, so a model on a
+     * player is normally shown to everyone but them.
+     *
+     * @param blueprint the blueprint
+     * @param anchor what the model is on
+     * @param options changes to the defaults
+     * @param selfView true to show a model on a player to that player as well
+     * @return the live model
+     */
+    public Model spawn(
+            final Blueprint blueprint,
+            final ModelAnchor anchor,
+            final Consumer<SpawnOptions> options,
+            final boolean selfView
+    ) {
         Blueprint current = this.registry.find(blueprint.key())
                 .orElseThrow(() -> new IllegalStateException(String.format(UNREGISTERED, blueprint.key().asString())));
         Set<EntityPart> hidden = EntityPart.NONE;
@@ -195,6 +217,7 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
         ModelSettings defaults = this.settings;
         ModelOptions chosen = new ModelOptions(current, defaults.viewDistance(), defaults.interpolation(), hidden);
         options.accept(chosen);
+        chosen.selfView = selfView;
         HyperionModel model = new HyperionModel(this, current, anchor, chosen, this.pack);
         this.models.put(model.uniqueId(), model);
         if (entity != null) {
@@ -625,6 +648,20 @@ public final class ModelManager implements ModelSpawner, ModelTracker {
 
     PartItems items() {
         return this.items;
+    }
+
+    /**
+     * Use the skin service, which gives a model on a player that player's skin. Call once, on
+     * enable.
+     *
+     * @param skins the skin service
+     */
+    public void skins(final HyperionSkins skins) {
+        this.skins = skins;
+    }
+
+    @Nullable HyperionSkins skins() {
+        return this.skins;
     }
 
     HyperionBehaviorRegistry behaviors() {

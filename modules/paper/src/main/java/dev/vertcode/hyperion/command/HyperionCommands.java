@@ -25,8 +25,10 @@ import dev.vertcode.hyperion.config.HyperionMessages;
 import dev.vertcode.hyperion.config.MessagePalette;
 import dev.vertcode.hyperion.debug.DebugViews;
 import dev.vertcode.hyperion.effect.HyperionEffects;
+import dev.vertcode.hyperion.player.HyperionPlayerAnimations;
 import dev.vertcode.hyperion.model.ModelManager;
 import dev.vertcode.hyperion.pack.PackManager;
+import dev.vertcode.hyperion.skin.HyperionSkins;
 import dev.vertcode.hyperion.ui.Gallery;
 
 import static dev.vertcode.hyperion.config.HyperionMessages.value;
@@ -65,6 +67,8 @@ public final class HyperionCommands {
      * @param debug the debug views the debug command switches
      * @param gallery the gallery the gallery command opens
      * @param armor the armor sets the armor command lists and gives
+     * @param playerAnimations the animations on players the player command plays and stops
+     * @param skins the skin service, for the player command
      */
     public static void register(
             final HyperionPlugin plugin,
@@ -74,7 +78,9 @@ public final class HyperionCommands {
             final HyperionEffects effects,
             final DebugViews debug,
             final Gallery gallery,
-            final HyperionArmorRegistry armor
+            final HyperionArmorRegistry armor,
+            final HyperionPlayerAnimations playerAnimations,
+            final HyperionSkins skins
     ) {
         PaperCommandManager<Source> manager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
@@ -115,7 +121,8 @@ public final class HyperionCommands {
                 new EffectCommand(effects, models),
                 new DebugCommand(debug),
                 new GalleryCommand(gallery),
-                new ArmorCommand(plugin, armor)
+                new ArmorCommand(plugin, armor),
+                new PlayerCommand(plugin, registry, playerAnimations, skins)
         );
     }
 

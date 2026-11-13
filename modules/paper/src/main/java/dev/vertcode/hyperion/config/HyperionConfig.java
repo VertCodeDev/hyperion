@@ -31,6 +31,7 @@ import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
  * @param debug how the debug views draw
  * @param gallery the gallery settings
  * @param armor how custom armor is drawn
+ * @param playerAnimations the settings for animations on players
  */
 public record HyperionConfig(
         PackSettings pack,
@@ -39,7 +40,8 @@ public record HyperionConfig(
         EffectSettings effects,
         DebugSettings debug,
         GallerySettings gallery,
-        ArmorSettings armor
+        ArmorSettings armor,
+        PlayerAnimationSettings playerAnimations
 ) {
 
     /**
@@ -56,6 +58,7 @@ public record HyperionConfig(
     private static final String MINECRAFT = "minecraft:";
     private static final int DEFAULT_VIEW_DISTANCE = 48;
     private static final int DEFAULT_INTERPOLATION = 2;
+    private static final int DEFAULT_PLAYER_FADE = 3;
     private static final String AUTO = "models.auto-animations.";
     private static final String BEHAVIORS = "behaviors.";
     private static final String STEERING = "behaviors.seats.steering.";
@@ -170,7 +173,8 @@ public record HyperionConfig(
                 effects,
                 debug(config, logger),
                 gallery(config, logger),
-                armor(config, logger)
+                armor(config, logger),
+                playerAnimations(config, logger)
         );
     }
 
@@ -218,6 +222,28 @@ public record HyperionConfig(
         }
 
         return new ArmorSettings(config.getBoolean("armor.shader", false), distance, layers);
+    }
+
+    /**
+     * Read the settings for animations on players.
+     *
+     * @param config the contents of {@code config.yml}
+     * @param logger where unusable values are reported
+     * @return the settings
+     */
+    private static PlayerAnimationSettings playerAnimations(final ConfigurationSection config, final Logger logger) {
+        int fade = config.getInt("player-animations.fade-ticks", DEFAULT_PLAYER_FADE);
+        if (fade < 0) {
+            logger.warning(String.format(BAD_VALUE, fade, "player-animations.fade-ticks", DEFAULT_PLAYER_FADE));
+            fade = DEFAULT_PLAYER_FADE;
+        }
+
+        return new PlayerAnimationSettings(
+                config.getBoolean("player-animations.show-to-self", true),
+                config.getBoolean("player-animations.stop-on-sneak", false),
+                config.getBoolean("player-animations.stop-on-damage", false),
+                fade
+        );
     }
 
     /**

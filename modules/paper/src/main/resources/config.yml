@@ -96,6 +96,21 @@ gallery:
   # How long a private preview stays before it goes, in seconds.
   preview-seconds: 120
 
+# Animations on players: a player model takes a player's place, wearing their skin, for as long
+# as an animation plays on it. For emotes, sitting, or a pose a plugin keeps on a player.
+# A player model is a model with a texture named "player_skin"; see player-template.bbmodel.
+player-animations:
+  # Show a player the model that stands in for them. They see all of it in third person; in
+  # first person they see the parts that come in front of them, such as a raised arm.
+  show-to-self: true
+  # End an animation on a player when they sneak, or when they take damage. These are the
+  # defaults: a plugin, or /hy player play with --stop-on-sneak or --stop-on-damage, can choose
+  # per animation.
+  stop-on-sneak: false
+  stop-on-damage: false
+  # How many ticks an animation takes to blend in and out.
+  fade-ticks: 3
+
 # Custom armor sets, from the .bbmodel files in plugins/Hyperion/armor.
 armor:
   # Draw chestplates, leggings and boots in 3D with a core shader, from 1.21.2. Off draws them

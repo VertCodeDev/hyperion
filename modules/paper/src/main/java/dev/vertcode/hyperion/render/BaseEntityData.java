@@ -57,6 +57,22 @@ public final class BaseEntityData {
      * @return the packets, to send in order
      */
     public static List<PacketWrapper<?>> packets(final Entity entity, final Set<EntityPart> hidden) {
+        return packets(entity, hidden, false);
+    }
+
+    /**
+     * Build the packets that show an entity with some parts hidden, for the entity itself or
+     * for someone else.
+     *
+     * <p>A player is never sent their own equipment: the client takes it for what is in their
+     * inventory, and would empty their hands and armor slots.
+     *
+     * @param entity the entity
+     * @param hidden the parts to hide
+     * @param self whether the packets go to the entity itself, a player carrying a model
+     * @return the packets
+     */
+    public static List<PacketWrapper<?>> packets(final Entity entity, final Set<EntityPart> hidden, final boolean self) {
         List<PacketWrapper<?>> packets = new ArrayList<>(2);
         List<EntityData<?>> data = new ArrayList<>(3);
         data.add(new EntityData<>(DisplayData.FLAGS, EntityDataTypes.BYTE, HiddenParts.flags(flags(entity), hidden)));
@@ -69,7 +85,7 @@ public final class BaseEntityData {
         }
 
         packets.add(Packets.metadata(entity.getEntityId(), data));
-        if (entity instanceof LivingEntity living && living.getEquipment() != null) {
+        if (!self && entity instanceof LivingEntity living && living.getEquipment() != null) {
             packets.add(equipment(living.getEntityId(), living.getEquipment(), hidden.contains(EntityPart.EQUIPMENT)));
         }
 

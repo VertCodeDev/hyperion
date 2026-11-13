@@ -65,6 +65,7 @@ import dev.vertcode.hyperion.api.model.hitbox.HitboxMode;
 import dev.vertcode.hyperion.api.model.locator.Locator;
 import dev.vertcode.hyperion.api.model.view.PlayerView;
 import dev.vertcode.hyperion.api.model.view.Viewers;
+import dev.vertcode.hyperion.api.skin.Skin;
 import dev.vertcode.hyperion.bedrock.BedrockIds;
 import dev.vertcode.hyperion.bedrock.BedrockLink;
 import dev.vertcode.hyperion.bedrock.BedrockPackBuilder;
@@ -83,6 +84,8 @@ import dev.vertcode.hyperion.render.DisplayTransform;
 import dev.vertcode.hyperion.render.ModelSpace;
 import dev.vertcode.hyperion.render.PartItems;
 import dev.vertcode.hyperion.render.Packets;
+import dev.vertcode.hyperion.skin.HyperionSkin;
+import dev.vertcode.hyperion.skin.HyperionSkins;
 
 /**
  * A live model: bones shown as item displays to the players who can see it.
@@ -146,6 +149,9 @@ final class HyperionModel implements Model {
     private volatile boolean lookDirty = true;
     private volatile boolean moveDirty = true;
     private volatile boolean hiddenDirty;
+    private volatile @Nullable HyperionSkin skin;
+    private volatile boolean skinDirty;
+    private final boolean selfView;
     private volatile boolean teleported;
     private @Nullable ScheduledTask task;
     private @Nullable ModelRotation lastRotation;
@@ -221,6 +227,38 @@ final class HyperionModel implements Model {
                 && (auto != null ? auto : manager.settings().autoAnimations().enabledFor(this.entity.getType()));
         this.lastX = this.origin.getX();
         this.lastZ = this.origin.getZ();
+        this.selfView = options.selfView && this.entity instanceof Player;
+        this.skin = options.skin == null ? null : HyperionSkin.of(options.skin);
+        this.wearCarrierSkin();
+    }
+
+    /**
+     * Give a player model on a player that player's skin, unless the spawn options chose one.
+     * The skin arrives when it is downloaded; until then the model shows the skin of its file.
+     */
+    private void wearCarrierSkin() {
+        HyperionSkins skins = this.manager.skins();
+        if (this.skin != null || skins == null || !this.blueprint.skinned() || !(this.entity instanceof Player player)) {
+            return;
+        }
+
+        skins.of(player).thenAccept(found -> {
+            if (this.skin == null && !found.equals(skins.fallback())) {
+                this.skin(found);
+            }
+        });
+    }
+
+    /**
+     * Return the skin the parts are drawn with: the one the model was given, or the skin
+     * texture of its file.
+     *
+     * @return the skin, or null when the blueprint is not a player model
+     */
+    private @Nullable HyperionSkin wornSkin() {
+        HyperionSkin given = this.skin;
+
+        return given != null ? given : this.blueprint.fileSkin();
     }
 
     /**
@@ -476,6 +514,14 @@ final class HyperionModel implements Model {
      */
     private List<Player> candidates(final Location here) {
         if (this.entity != null) {
+            // A player never tracks themselves: add them when the model is theirs to see too.
+            if (this.selfView && this.entity instanceof Player self && self.isOnline()) {
+                List<Player> all = new ArrayList<>(this.entity.getTrackedBy());
+                all.add(self);
+
+                return all;
+            }
+
             return List.copyOf(this.entity.getTrackedBy());
         }
 
@@ -552,7 +598,8 @@ final class HyperionModel implements Model {
         }
 
         UUID id = viewer.player().getUniqueId();
-        for (PacketWrapper<?> packet : BaseEntityData.packets(carrier, this.manager.hiddenFor(carrier.getEntityId(), id))) {
+        Set<EntityPart> parts = this.manager.hiddenFor(carrier.getEntityId(), id);
+        for (PacketWrapper<?> packet : BaseEntityData.packets(carrier, parts, id.equals(carrier.getUniqueId()))) {
             Packets.send(viewer.user(), packet);
         }
 
@@ -717,6 +764,7 @@ final class HyperionModel implements Model {
 
         boolean restyle = view.takeLookDirty() || this.lookChangedThisFrame || spawn;
         PartItems items = this.manager.items();
+        HyperionSkin worn = this.wornSkin();
         for (HyperionBone bone : this.bones) {
             DisplayLook look = this.lookOf(bone, view);
             HyperionViewBone override = view.existing(bone.name());
@@ -728,7 +776,7 @@ final class HyperionModel implements Model {
                 DisplayLook before = view.sentLooks().get(display);
                 ItemStack item = null;
                 if (restyle || before == null || partLook.itemDiffers(before)) {
-                    item = items.part(Objects.requireNonNull(display.part()), partLook);
+                    item = items.part(Objects.requireNonNull(display.part()), partLook, worn);
                 }
 
                 this.sendView(viewer, view, display, own.getOrDefault(display, display.transform()), partLook, item, spawn, here);
@@ -940,6 +988,13 @@ final class HyperionModel implements Model {
     private void computeLooks() {
         this.lookChangedThisFrame = true;
         PartItems items = this.manager.items();
+        // Clear the flag before reading the skin: a skin set in between is seen now or flagged again.
+        boolean reskinned = this.skinDirty;
+        if (reskinned) {
+            this.skinDirty = false;
+        }
+
+        HyperionSkin worn = this.wornSkin();
         for (HyperionBone bone : this.bones) {
             DisplayLook look = this.lookOf(bone, null);
             PartDisplay item = bone.itemDisplay();
@@ -947,8 +1002,9 @@ final class HyperionModel implements Model {
             for (PartDisplay display : bone.displays()) {
                 DisplayLook previous = display.look();
                 display.look(partLook);
-                if (previous == null || partLook.itemDiffers(previous)) {
-                    display.item(items.part(Objects.requireNonNull(display.part()), partLook));
+                boolean reskin = reskinned && Objects.requireNonNull(display.part()).skin() != null;
+                if (reskin || previous == null || partLook.itemDiffers(previous)) {
+                    display.item(items.part(Objects.requireNonNull(display.part()), partLook, worn));
                 }
             }
 
@@ -1225,7 +1281,8 @@ final class HyperionModel implements Model {
      */
     private void sendEntity(final Viewer viewer, final Entity carrier) {
         Set<EntityPart> parts = this.manager.hiddenFor(carrier.getEntityId(), viewer.player().getUniqueId());
-        for (PacketWrapper<?> packet : BaseEntityData.packets(carrier, parts)) {
+        boolean self = viewer.player().getUniqueId().equals(carrier.getUniqueId());
+        for (PacketWrapper<?> packet : BaseEntityData.packets(carrier, parts, self)) {
             Packets.send(viewer.user(), packet);
         }
     }
@@ -2386,6 +2443,20 @@ final class HyperionModel implements Model {
     @Override
     public Model glowColor(final @Nullable Color color) {
         this.look.glowColor(color);
+
+        return this;
+    }
+
+    @Override
+    public Optional<Skin> skin() {
+        return Optional.ofNullable(this.skin);
+    }
+
+    @Override
+    public Model skin(final @Nullable Skin skin) {
+        this.skin = skin == null ? null : HyperionSkin.of(skin);
+        this.skinDirty = true;
+        this.lookDirty = true;
 
         return this;
     }

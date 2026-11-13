@@ -44,6 +44,8 @@ permissions:
       hyperion.command.debug: true
       hyperion.command.gallery: true
       hyperion.command.armor: true
+      hyperion.command.player: true
+      hyperion.command.player.others: true
       hyperion.menu: true
   hyperion.command.help:
     description: See the Hyperion help menu.
@@ -80,6 +82,12 @@ permissions:
     default: op
   hyperion.command.animate:
     description: Play and stop animations on the nearest model.
+    default: op
+  hyperion.command.player:
+    description: Play and stop animations on yourself, in your own skin.
+    default: op
+  hyperion.command.player.others:
+    description: Play and stop animations on other players.
     default: op
   hyperion.command.effect:
     description: Play, stop and list effects.
