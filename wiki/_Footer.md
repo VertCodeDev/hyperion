@@ -1,0 +1,1 @@
+Hyperion is open source under the [MIT License](https://github.com/VertCodeDev/hyperion/blob/main/LICENSE). Found a mistake on this page? [Open an issue](https://github.com/VertCodeDev/hyperion/issues).

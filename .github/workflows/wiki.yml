@@ -1,0 +1,50 @@
+# Publishes the wiki folder to the repository's GitHub wiki.
+#
+# A GitHub wiki is a git repository of its own (<repo>.wiki.git) that pull requests cannot reach.
+# The pages are kept in wiki/ instead, so they are reviewed like code, and this workflow copies
+# them over whenever they change on main. Edits made on the wiki's own web page are overwritten
+# by the next run: change the files in wiki/.
+#
+# One-time setup: turn Wikis on in the repository settings and save a first page in the Wiki tab.
+# GitHub only creates the wiki's repository once it has a page.
+name: Publish wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy wiki/ into the wiki's repository
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git clone "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" published
+          rsync --archive --delete --exclude .git wiki/ published/
+
+          cd published
+          git add --all
+          if git diff --cached --quiet; then
+            echo "The wiki is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --message "docs: publish the wiki from ${GITHUB_SHA::7}"
+          git push
