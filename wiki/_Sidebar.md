@@ -10,6 +10,7 @@
 - [Bone Behaviors](Bone-Behaviors)
 - [Effects](Effects)
 - [Custom Armor](Custom-Armor)
+- [Player Models](Player-Models)
 - [Bedrock Support](Bedrock-Support)
 - [Staff Tools](Staff-Tools)
 
@@ -26,4 +27,5 @@
 - [API Behaviors](API-Behaviors)
 - [API Effects](API-Effects)
 - [API Armor](API-Armor)
+- [API Player Models](API-Player-Models)
 - [API Events](API-Events)

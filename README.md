@@ -82,6 +82,13 @@ designed around that one goal:
 - Real armor items underneath, so enchanting, repairing and dyeing work as players expect.
 - Events for equipping, taking off and wearing a full set, to build set bonuses on.
 
+### 🕺 Player models
+
+- Models that wear a player's own skin, with no core shader, from 1.21.4.
+- Animations on players: a player model takes the player's place and plays an animation, for
+  emotes, sitting, or a pose they keep while they run around, such as hands in the air.
+- Slim and wide arms, two-part arms and legs, and a ready player rig to animate in Blockbench.
+
 ### 🧩 For developers
 
 - A Java API to spawn, animate and control models, listen to animation events and register armor.
@@ -100,6 +107,7 @@ designed around that one goal:
 - [x] Bone behaviors: heads, hitboxes, seats, name tags, hands
 - [x] Timeline effects (particles, sounds, events)
 - [ ] Custom armor
+- [ ] Player models and animations on players
 - [x] Bedrock support
 - [ ] Public API release
 
@@ -136,7 +144,8 @@ The plugin jar is `modules/paper/build/libs/hyperion-paper-v<version>.jar`.
 
 # 💻 API
 
-The API is not published yet. Once it is, adding Hyperion to a plugin will look like this:
+The API is published to Maven Central with every release. There is no release yet; once there is,
+adding Hyperion to a plugin looks like this:
 
 ```kotlin
 repositories {

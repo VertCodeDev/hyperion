@@ -4,9 +4,9 @@ The api lets your plugin spawn, change and listen to Hyperion models, play effec
 custom armor. It holds interfaces and small data types only; the Hyperion plugin implements them.
 
 > [!IMPORTANT]
-> The api is not published to a Maven repository yet. Until it is, build Hyperion and depend on
-> `modules/api/build/libs/api-<version>.jar`. Once published, it will be
-> `compileOnly("dev.vertcode.hyperion:hyperion-api:VERSION")`.
+> There is no release yet, so the api is not on Maven Central yet. Until the first release, build
+> Hyperion and depend on `modules/api/build/libs/api-<version>.jar`, or run
+> `./gradlew :api:publishToMavenLocal` and add `mavenLocal()` to your repositories.
 
 ## The pages
 
@@ -18,6 +18,7 @@ custom armor. It holds interfaces and small data types only; the Hyperion plugin
 | [API Behaviors](API-Behaviors) | Heads, seats, hitboxes, name tags, and writing your own behavior |
 | [API Effects](API-Effects) | Playing effects, building them in code, your own part types |
 | [API Armor](API-Armor) | Armor sets, items, what a player wears, set bonuses |
+| [API Player Models](API-Player-Models) | Animations on players in their own skin, and giving models a player's skin |
 | [API Events](API-Events) | Every event, with examples |
 
 ## Setup
@@ -41,7 +42,29 @@ dependencies:
 depend: [Hyperion]
 ```
 
-Add the api as `compileOnly`. Do not shade it: the Hyperion plugin already carries it.
+Add the api as `compileOnly`. It is on Maven Central, with its sources and Javadoc, so your IDE
+shows the documentation of every method.
+
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly("dev.vertcode.hyperion:hyperion-api:VERSION")
+}
+```
+
+```xml
+<dependency>
+    <groupId>dev.vertcode.hyperion</groupId>
+    <artifactId>hyperion-api</artifactId>
+    <version>VERSION</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+Do not shade it: the Hyperion plugin already carries it.
 
 ## The entry point
 
@@ -53,6 +76,8 @@ Everything starts at the `Hyperion` class:
 | `Hyperion.tracker()` | Live models: by entity, by id, near a location |
 | `Hyperion.effects()` | Effects: find, register, play |
 | `Hyperion.armor()` | Armor sets, items and what a player wears |
+| `Hyperion.playerAnimations()` | Animations on players, in their own skin: play, stop, what is playing |
+| `Hyperion.skins()` | Player skins for models to wear |
 | `Hyperion.behaviors()` | Bone behaviors, and registering your own |
 | `Hyperion.formats()` | Model file formats (experimental) |
 

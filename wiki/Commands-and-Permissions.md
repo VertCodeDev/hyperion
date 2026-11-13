@@ -44,6 +44,17 @@ values suggest themselves while you type: scales, speeds, radii and mob names.
 | `/hy armor list` | `hyperion.command.armor` | Every armor set and its pieces |
 | `/hy armor give <player> <set> [piece]` | `hyperion.command.armor` | Gives a player a whole set, or one piece of it |
 
+## Player models
+
+See [Player Models](Player-Models).
+
+| Command | Permission | What it does |
+|---|---|---|
+| `/hy player play <model> <animation> [player] [--loop] [--lock] [--no-walk] [--stop-on-sneak] [--stop-on-damage]` | `hyperion.command.player` | Plays an animation of a player model on you, in your skin. `--loop` keeps it going, `--lock` holds you in place, `--no-walk` leaves the walk animation off. |
+| `/hy player stop [player]` | `hyperion.command.player` | Stops it and shows the player again |
+
+Naming another player needs `hyperion.command.player.others` as well.
+
 ## Staff tools
 
 | Command | Permission | What it does |
@@ -81,6 +92,8 @@ playing effects `hyperion.command.effect`, and giving armor `hyperion.command.ar
 | `hyperion.command.debug` | `/hy debug` |
 | `hyperion.command.gallery` | `/hy gallery` |
 | `hyperion.command.armor` | `/hy armor` |
+| `hyperion.command.player` | `/hy player`, for yourself |
+| `hyperion.command.player.others` | `/hy player`, for other players |
 | `hyperion.command.pack.build` | `/hy pack build` |
 | `hyperion.command.pack.send` | `/hy pack send` |
 | `hyperion.command.pack.status` | `/hy pack status` |

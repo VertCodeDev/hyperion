@@ -56,6 +56,17 @@ See [Bone Behaviors](Bone-Behaviors) for what each behavior does.
 | `debug.axis-length` | `0.4` | How long a bone's axes are, in blocks |
 | `gallery.preview-seconds` | `120` | How long a private preview stays |
 
+### player-animations
+
+See [Player Models](Player-Models).
+
+| Setting | Default | What it does |
+|---|---|---|
+| `player-animations.show-to-self` | `true` | Show a player the model that stands in for them |
+| `player-animations.stop-on-sneak` | `false` | End an animation on a player when they sneak, unless the plugin or command chose |
+| `player-animations.stop-on-damage` | `false` | End an animation on a player when they take damage, unless the plugin or command chose |
+| `player-animations.fade-ticks` | `3` | How many ticks an animation takes to blend in and out |
+
 ### armor
 
 See [Custom Armor](Custom-Armor).

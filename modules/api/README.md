@@ -34,7 +34,9 @@ boss.animator().play("roar");
 | `api.model.metadata` | Custom data kept from Blockbench files |
 | `api.animation` | Playing, layering, fading and stopping animations, for everyone or one player |
 | `api.armor` | `ArmorRegistry`, armor sets and their pieces, `WornArmor` and the data a set's `.yml` gives plugins |
-| `api.event` | Spawn, removal, interaction, viewer and blueprint load events, and the armor events: equip attempts, equip and unequip, full sets and loads |
+| `api.skin` | `SkinService` and `Skin`: player skins for models to wear |
+| `api.player` | `PlayerAnimations`: a player model that takes a player's place while an animation plays, for emotes and poses |
+| `api.event` | Spawn, removal, interaction, viewer and blueprint load events, the armor events: equip attempts, equip and unequip, full sets and loads, and the start and end events of animations on players |
 | `api.version` | `MinecraftVersion` and `Feature`: what the running server has, for code that runs on 1.21 to 26.3 |
 
 ## Threading
@@ -52,3 +54,10 @@ api says `@Nullable Color`.
 ## Building
 
 `./gradlew :api:build` from the repository root.
+
+## Publishing
+
+The api goes to Maven Central as `dev.vertcode.hyperion:hyperion-api`, with its sources and
+Javadoc. Pushing a tag such as `v1.2.3` runs the `Publish api` workflow, which publishes that
+version. `./gradlew :api:publishToMavenLocal` puts a snapshot in your local Maven repository to
+try it from another project.

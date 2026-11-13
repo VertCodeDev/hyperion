@@ -60,6 +60,16 @@ public void onKeyframe(AnimationKeyframeEvent event) {
 | `EffectEndEvent` | An effect ended or was stopped | `effect()`, `finished()` |
 | `EffectKeyframeEvent` | An effect passed a keyframe of an `event` part | `effect()`, `name()`, `location()` |
 
+## Animations on players
+
+Both have `getPlayer()` and `animation()`, and fire on the player's own thread. See
+[API Player Models](API-Player-Models).
+
+| Event | When | Useful methods |
+|---|---|---|
+| `PlayerAnimationStartEvent` | An animation is about to start on a player. Cancellable. | `blueprint()` |
+| `PlayerAnimationEndEvent` | An animation on a player ended or was stopped | `finished()` |
+
 ## Armor
 
 Armor events fire however the armor changed, and also when a player joins or leaves wearing it.

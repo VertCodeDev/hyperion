@@ -1,8 +1,9 @@
 # Hyperion
 
 Hyperion brings [Blockbench](https://www.blockbench.net/) models into Minecraft: animated models
-for bosses, NPCs, pets, mounts and props, effects that play along with them, and custom armor. It
-builds the resource pack for you, and players need no mods.
+for bosses, NPCs, pets, mounts and props, effects that play along with them, custom armor, and
+animations on players in their own skin. It builds the resource pack for you, and players need
+no mods.
 
 It is a free, open source plugin for Paper, Folia and Canvas, for Minecraft 1.21 to 26.3, released
 under the MIT license.
@@ -21,6 +22,7 @@ under the MIT license.
 | Make heads turn, add seats and hitboxes | [Bone Behaviors](Bone-Behaviors) |
 | Add particles, sounds and camera scenes | [Effects](Effects) |
 | Make custom armor | [Custom Armor](Custom-Armor) |
+| Animate players in their own skin: emotes, poses | [Player Models](Player-Models) |
 | Fix "failed to download" | [Resource Pack](Resource-Pack) |
 | Show models to Bedrock players | [Bedrock Support](Bedrock-Support) |
 | Use Hyperion from my own plugin | [Developer API](Developer-API) |
@@ -44,6 +46,7 @@ Start at [Developer API](Developer-API) for setup and threading, then:
 | [API Behaviors](API-Behaviors) | Heads, seats, hitboxes, name tags, and your own behaviors |
 | [API Effects](API-Effects) | Playing effects, building them in code, your own part types |
 | [API Armor](API-Armor) | Armor sets, items, what a player wears, set bonuses |
+| [API Player Models](API-Player-Models) | Animations on players, and giving models a player's skin |
 | [API Events](API-Events) | Every event, with examples |
 
 ## What makes it fast

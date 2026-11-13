@@ -35,13 +35,15 @@ not a new Hyperion release. Hyperion does not start without it.
 | `blueprint.metadata` | `JsonMetadata`: the extra fields Blockbench plugins store, read only |
 | `command` | One class per command, `HyperionCommands` to register them, `HyperionPermissions` |
 | `config` | `HyperionConfig`, `ModelSettings`, `BehaviorSettings`, `PackSettings`, `DebugSettings`, `GallerySettings` and `ArmorSettings` from `config.yml`; `HyperionMessages`, one constant per line of `messages.yml`, and the `MessageBook` they render from |
-| `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it |
+| `pack` | `PackBuilder` turns blueprints into the resource pack; `PackManager` builds, hosts and sends it; `SkinFaces` cuts the faces of a player model into one square per skin pixel |
 | `pack.armor` | `ArmorCompiler` writes armor into the pack: item models, equipment assets, the 3D layers `GeometryLayers` encodes, the 1.21 to 1.21.1 `LeatherAtlas`, and the vanilla shaders `ShaderPatcher` extends, read from the `ClientJar` |
 | `armor` | `HyperionArmorRegistry` and `ArmorLoader` (the sets in `plugins/Hyperion/armor`), `ArmorItems` (each version's items), `ArmorGeometry` (a bone's faces in its limb's space) and `ArmorTracker`, which fires the armor events |
+| `skin` | `HyperionSkins` downloads player skins; `HyperionSkin` holds one; `SkinMap` says which skin pixel each face of a model part shows, and `SkinLayout` knows a skin's layout |
+| `player` | `HyperionPlayerAnimations`: a player model on a player, hidden behind it, for as long as an animation plays |
 | `model` | `ModelManager` (spawning, the tracker, following reloads), `HyperionModel` and its bones, locators and viewers, and the api's model registry |
 | `render` | The bone and part matrices, the item display's entity data, the items parts show, and the packets |
 | `behavior` | `HyperionBehaviorRegistry`, the behavior types plugins register, and `BuiltinTypes`: the head, hitbox, seat, name tag, hand and ghost behaviors Hyperion ships |
-| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats, `StaffToolListener` for debug views and previews of players who leave, `ArmorListener` and `ArmorEquipListener` for armor; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
+| `listener` | `PackListener` for the pack, `ModelListener` for tracking and removal, `SeatListener` for seats, `StaffToolListener` for debug views and previews of players who leave, `ArmorListener` and `ArmorEquipListener` for armor, `PlayerAnimationListener` for what ends an animation on a player; the PacketEvents listeners `BaseEntityListener`, which hides an entity's parts, `HitboxListener`, which turns hits on hitboxes into events, and `RiderInputListener`, which notes the keys riders hold |
 | `animation` | `AnimationBaker` bakes keyframes into per-tick samples on load; `ModelAnimator` plays them on a live model |
 | `animation.molang` | The part of Molang Blockbench keyframes use |
 | `ui` | The model menu, the `Gallery` with its `Previews`, and `Menus`, which loads the InvUI module that fits the server |
@@ -90,6 +92,8 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
 | `/hy debug [view]` | `hyperion.command.debug` | Show or hide `bones`, `hitboxes`, `locators`, `seats` or `effects` on what is near you, `all` or `off`; without a view, which are on |
 | `/hy gallery [filter] [--effects] [--armor]` | `hyperion.command.gallery` | Browse, preview and spawn every model, every effect or every armor set in a menu |
+| `/hy player play <model> <animation> [player] [--loop] [--lock] [--no-walk] [--stop-on-sneak] [--stop-on-damage]` | `hyperion.command.player` | Play an animation of a player model in your place, or another player's with `hyperion.command.player.others` |
+| `/hy player stop [player]` | `hyperion.command.player` | Stop it and show the player again |
 | `/hy armor list` | `hyperion.command.armor` | Every armor set and its pieces |
 | `/hy armor give <player> <set> [piece]` | `hyperion.command.armor` | Give a player a whole set, or one piece of it |
 | `/hy pack build` | `hyperion.command.pack.build` | Build the resource pack again |
