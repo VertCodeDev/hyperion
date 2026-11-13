@@ -30,8 +30,21 @@ under the MIT license.
 - [Commands and Permissions](Commands-and-Permissions)
 - [Configuration](Configuration)
 - [Staff Tools](Staff-Tools): the gallery, the model menu and the debug views
-- [API Events](API-Events)
 - [Troubleshooting](Troubleshooting)
+
+## For developers
+
+Start at [Developer API](Developer-API) for setup and threading, then:
+
+| Page | What it covers |
+|---|---|
+| [API Models](API-Models) | Finding, spawning and changing models, who sees them, your own model files |
+| [API Bones](API-Bones) | Bones: look, transforms, modifiers, items, and locators |
+| [API Animations](API-Animations) | Playing, looping, fading and stopping animations |
+| [API Behaviors](API-Behaviors) | Heads, seats, hitboxes, name tags, and your own behaviors |
+| [API Effects](API-Effects) | Playing effects, building them in code, your own part types |
+| [API Armor](API-Armor) | Armor sets, items, what a player wears, set bonuses |
+| [API Events](API-Events) | Every event, with examples |
 
 ## What makes it fast
 

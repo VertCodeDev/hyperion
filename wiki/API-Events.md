@@ -19,14 +19,15 @@ load events are async.
 ```java
 @EventHandler
 public void onClick(ModelInteractEvent event) {
-    if (event.type() == InteractionType.RIGHT_CLICK) {
+    if (event.type() == InteractionType.INTERACT) {
         event.player().sendMessage("You clicked " + event.model().blueprint().key());
         event.setCancelled(true);   // the entity under the model does not get the click
     }
 }
 ```
 
-`bone()` is the hitbox bone that was hit, when the model has hitbox bones.
+`type()` is `ATTACK` for a hit and `INTERACT` for a right-click. `bone()` is the hitbox bone that
+was hit, when the model has hitbox bones.
 
 ## Animations
 

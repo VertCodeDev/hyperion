@@ -20,4 +20,10 @@
 
 **Developers**
 - [Developer API](Developer-API)
+- [API Models](API-Models)
+- [API Bones](API-Bones)
+- [API Animations](API-Animations)
+- [API Behaviors](API-Behaviors)
+- [API Effects](API-Effects)
+- [API Armor](API-Armor)
 - [API Events](API-Events)

@@ -8,6 +8,18 @@ custom armor. It holds interfaces and small data types only; the Hyperion plugin
 > `modules/api/build/libs/api-<version>.jar`. Once published, it will be
 > `compileOnly("dev.vertcode.hyperion:hyperion-api:VERSION")`.
 
+## The pages
+
+| Page | What it covers |
+|---|---|
+| [API Models](API-Models) | Finding, spawning and changing models, who sees them, your own model files |
+| [API Bones](API-Bones) | Bones: look, transforms, modifiers, items, and locators |
+| [API Animations](API-Animations) | Playing, looping, fading and stopping animations, per player too |
+| [API Behaviors](API-Behaviors) | Heads, seats, hitboxes, name tags, and writing your own behavior |
+| [API Effects](API-Effects) | Playing effects, building them in code, your own part types |
+| [API Armor](API-Armor) | Armor sets, items, what a player wears, set bonuses |
+| [API Events](API-Events) | Every event, with examples |
+
 ## Setup
 
 Depend on Hyperion so it loads before your plugin.
@@ -29,6 +41,10 @@ dependencies:
 depend: [Hyperion]
 ```
 
+Add the api as `compileOnly`. Do not shade it: the Hyperion plugin already carries it.
+
+## The entry point
+
 Everything starts at the `Hyperion` class:
 
 | Call | What it gives |
@@ -38,176 +54,49 @@ Everything starts at the `Hyperion` class:
 | `Hyperion.effects()` | Effects: find, register, play |
 | `Hyperion.armor()` | Armor sets, items and what a player wears |
 | `Hyperion.behaviors()` | Bone behaviors, and registering your own |
-| `Hyperion.formats()` | Model file formats |
+| `Hyperion.formats()` | Model file formats (experimental) |
 
-## Spawning a model
+These throw `IllegalStateException` when Hyperion is not enabled, so call them from `onEnable` or
+later, not from a static initializer.
+
+## A first example
 
 ```java
 ModelBlueprint dragon = Hyperion.models().find(Key.key("hyperion", "bosses/dragon")).orElseThrow();
 
-// On an entity: the model follows it.
 Model boss = dragon.attach(zombie, options -> options.scale(2.5f).viewDistance(64));
-
-// On its own, at a location.
-Model statue = dragon.spawn(location, options -> options.glowing(true));
-```
-
-`SpawnOptions` also sets the tint, glow color, brightness, a starting animation, who can see the
-model, and whether the automatic idle and walk animations run.
-
-Models are not saved. To keep one over a restart, spawn it again yourself, for models on entities
-in `EntitiesLoadEvent`.
-
-## Changing a live model
-
-```java
-boss.scale(3f);
 boss.bone("head").ifPresent(head -> head.tint(Color.RED).glowing(true));
-boss.teleport(location);     // for a model on its own
-boss.remove();
+boss.animator().play("roar");
 ```
 
-Find live models with the tracker:
+## Two words to know
 
-```java
-List<Model> onZombie = Hyperion.tracker().of(zombie);
-List<Model> nearby = Hyperion.tracker().near(location, 16);
-```
+- A **blueprint** (`ModelBlueprint`) is a loaded model file: its bones, animations and locators.
+  There is one per file.
+- A **model** (`Model`) is one live copy of a blueprint in the world. There can be many.
 
-## Animations
-
-```java
-AnimationHandle roar = boss.animator().play("roar");
-
-boss.animator().play("walk", options -> options
-        .speed(1.5f)
-        .loop(LoopMode.LOOP)
-        .fadeIn(5)
-        .fadeOut(5));
-
-roar.onEnd(() -> boss.animator().play("idle"));
-boss.animator().stop("walk");
-```
-
-`LoopMode` is `ONCE`, `LOOP` or `HOLD` (stay on the last frame).
-
-## Per-player views
-
-A player's view of a model has its own animator and look. What you set there, only that player
-sees, on top of what everyone sees.
-
-```java
-PlayerView view = boss.view(player);
-view.animator().play("wave");
-view.reset();   // back to what everyone sees
-```
-
-Who sees a model at all:
-
-```java
-boss.viewers().policy(ViewerPolicy.permission("myplugin.see.boss"));
-boss.viewers().hide(player);
-```
-
-## Seats and heads
-
-```java
-for (SeatBehavior seat : boss.seats()) {
-    seat.mount(player);
-    seat.locked(true);    // sneaking no longer gets them off
-}
-
-boss.behaviors(HeadBehavior.class).forEach(head -> head.target(player.getLocation()));
-```
-
-## Effects
-
-```java
-Hyperion.effects().play(Key.key("hyperion", "level_up"), EffectAnchor.on(boss));
-
-Hyperion.effects().play(Key.key("hyperion", "aura"), EffectAnchor.on(player), options -> options
-        .parameter("color", "#FF5555")
-        .viewers(EffectViewers.nearby(32)));
-```
-
-An anchor is a location (`EffectAnchor.at`), an entity or model (`on`), or a bone or locator of a
-model (`bone`, `locator`).
-
-Ship effects with your plugin by registering a folder of effect files in your own namespace:
-
-```java
-Hyperion.effects().registerFolder(this, "myplugin", getDataPath().resolve("effects"));
-```
-
-## Your own models
-
-Register models from your plugin's jar or its data folder. They get your namespace:
-
-```java
-Hyperion.models()
-        .register(this, Key.key("myplugin", "golem"), ModelSource.resource(this, "models/golem.bbmodel"))
-        .thenAccept(blueprint -> getLogger().info("Loaded " + blueprint.key()));
-```
-
-Loading runs off the server thread, so `register` returns a future. Hyperion rebuilds the resource
-pack for you.
-
-## Armor
-
-```java
-ArmorSet frost = Hyperion.armor().find(Key.key("hyperion", "frost")).orElseThrow();
-
-// Items
-frost.piece(ArmorSlot.HEAD).ifPresent(helmet -> player.getInventory().addItem(helmet.item()));
-
-// What a player wears
-WornArmor worn = Hyperion.armor().worn(player);
-if (worn.hasFullSet(frost)) {
-    // ...
-}
-
-// Is this item custom armor?
-Hyperion.armor().pieceOf(item).ifPresent(piece -> { /* piece.set(), piece.slot(), piece.stats() */ });
-
-// Values from the set's .yml "data" section
-String element = frost.data().getString("element", "none");
-```
-
-A set bonus is a few lines with the armor events:
-
-```java
-@EventHandler
-public void onFullSet(ArmorSetCompleteEvent event) {
-    if (event.set().key().asString().equals("hyperion:frost")) {
-        event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 0));
-    }
-}
-
-@EventHandler
-public void onSetBroken(ArmorSetBreakEvent event) {
-    if (event.set().key().asString().equals("hyperion:frost")) {
-        event.getPlayer().removePotionEffect(PotionEffectType.SPEED);
-    }
-}
-```
-
-See [API Events](API-Events) for every event.
+Armor has the same split: an `ArmorSet` is a loaded file, an `ArmorPiece` is one slot of it.
 
 ## Threading
 
 Hyperion runs on Folia and Canvas, so the rules are the same on every platform:
 
-- **`spawn`, `attach`, `teleport` and `remove`** must run on the thread that owns the location or
-  entity. On Folia, use that entity's or region's scheduler. On Paper, that is the main thread.
-- **Getters and appearance setters** (scale, tint, glow, animations) are safe from any thread and
-  take effect on the model's next frame.
-- **Events** fire on the thread that owns the model or player, except the two load events, which
-  are async.
+| What | Where to call it |
+|---|---|
+| `spawn`, `attach`, `teleport`, `remove` | On the thread that owns the location or entity. On Folia, that entity's or region's scheduler. On Paper, the main thread. |
+| Getters | Any thread |
+| Appearance setters: scale, tint, glow, bone transforms | Any thread. They take effect on the model's next frame. |
+| Playing and stopping animations and effects | Any thread |
+| Registries: find, register, reload | Any thread. Loading runs off the server thread and returns a future. |
+
+Events fire on the thread that owns the model or player, except the two load events, which are
+async. See [API Events](API-Events).
 
 ## Null safety
 
 Every package is `@NullMarked` with [JSpecify](https://jspecify.dev): nothing is null unless it is
-marked `@Nullable`. IntelliJ and Kotlin read these annotations.
+marked `@Nullable`. Things that may be missing come back as `Optional`. IntelliJ and Kotlin read
+these annotations, so Kotlin sees `Color?` where the api says `@Nullable Color`.
 
 ## Checking the server version
 
@@ -217,4 +106,19 @@ marked `@Nullable`. IntelliJ and Kotlin read these annotations.
 if (Feature.EQUIPPABLE.available()) {
     // 1.21.2 and later
 }
+
+MinecraftVersion version = MinecraftVersion.current();
 ```
+
+| Feature | Since |
+|---|---|
+| `PLAIN_ATTRIBUTE_KEYS` | 1.21.2 |
+| `PLAYER_INPUT_PACKET` | 1.21.2 |
+| `EQUIPPABLE` | 1.21.2 |
+| `ITEM_MODEL_DEFINITIONS` | 1.21.4 |
+| `PACK_FORMAT_RANGE` | 1.21.9 |
+
+## What is stable
+
+Interfaces marked `@ApiStatus.NonExtendable` are for calling, not for implementing. Types marked
+`@ApiStatus.Experimental` (model formats, per-player bones) may still change.
