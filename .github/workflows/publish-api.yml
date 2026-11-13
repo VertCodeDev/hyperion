@@ -1,0 +1,55 @@
+# Publishes the api to Maven Central as dev.vertcode.hyperion:hyperion-api.
+#
+# Push a tag such as v1.2.3 and this builds the whole project, then uploads the api with that
+# version, signed, and releases it. A release on Maven Central can never be changed or removed, so
+# tag only what is ready.
+#
+# One-time setup, as repository secrets:
+#   MAVEN_CENTRAL_USERNAME, MAVEN_CENTRAL_PASSWORD: a user token from central.sonatype.com, for an
+#     account that has verified the dev.vertcode namespace.
+#   SIGNING_KEY: the armored private GPG key, from `gpg --armor --export-secret-keys <key id>`.
+#     Its public key must be on keys.openpgp.org or keyserver.ubuntu.com.
+#   SIGNING_KEY_PASSWORD: that key's passphrase.
+name: Publish api
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-api
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The build compiles for Java 21 and checks against the newest Paper api with Java 25.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            25
+            21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Read the version from the tag
+        run: echo "RELEASE=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: ./gradlew build -Prelease="$RELEASE"
+
+      - name: Publish to Maven Central
+        run: ./gradlew :api:publishToMavenCentral -Prelease="$RELEASE"
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}

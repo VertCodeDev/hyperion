@@ -31,6 +31,8 @@ junit = "5.12.1"
 junit-platform = "1.12.1"
 run-paper = "3.0.2"
 shadow = "9.6.1"
+# Publishes the api to Maven Central, signed, with its sources and Javadoc.
+maven-publish = "0.37.0"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
@@ -56,3 +58,4 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 [plugins]
 run-paper = { id = "xyz.jpenilla.run-paper", version.ref = "run-paper" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
