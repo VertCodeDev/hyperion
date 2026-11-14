@@ -167,7 +167,12 @@ public final class HyperionExtension implements Extension {
      */
     @Subscribe
     public void onDisconnect(final SessionDisconnectEvent event) {
+        // A session that never logged in has no player to forget.
         UUID player = event.connection().javaUuid();
+        if (player == null) {
+            return;
+        }
+
         this.states.keySet().removeIf(entity -> entity.player().equals(player));
         this.seen.keySet().removeIf(entity -> entity.player().equals(player));
         for (LinkClient client : this.clients) {
@@ -196,7 +201,9 @@ public final class HyperionExtension implements Extension {
         SeenEntity entity = new SeenEntity(event.connection().javaUuid(), event.entityId());
         this.seen.put(entity, model);
         event.definition(definition);
-        event.preSpawnConsumer(spawned -> this.apply(spawned, model, this.states.getOrDefault(entity, ModelState.IDLE)));
+        // Not sent on its own here: the player does not have the entity yet and would drop the
+        // update, so the properties wait in the entity and travel with its spawn.
+        event.preSpawnConsumer(spawned -> this.apply(spawned, model, this.states.getOrDefault(entity, ModelState.IDLE), false));
     }
 
     // The stream
@@ -239,7 +246,7 @@ public final class HyperionExtension implements Extension {
             GeyserConnection connection = GeyserApi.api().connectionByUuid(player);
             GeyserEntity spawned = connection == null ? null : connection.entities().byJavaId(entity);
             if (model != null && spawned != null) {
-                this.apply(spawned, model, state);
+                this.apply(spawned, model, state, true);
             }
         }
     }
@@ -250,8 +257,10 @@ public final class HyperionExtension implements Extension {
      * @param entity the Bedrock entity
      * @param model the model's id
      * @param state the state
+     * @param now whether to send it right away, which only a player who already has the entity
+     *        can take
      */
-    private void apply(final GeyserEntity entity, final int model, final ModelState state) {
+    private void apply(final GeyserEntity entity, final int model, final ModelState state, final boolean now) {
         List<GeyserBooleanEntityProperty> switches = this.animations.getOrDefault(model, List.of());
         GeyserFloatEntityProperty speed = this.speeds.get(model);
         entity.updatePropertiesBatched(updater -> {
@@ -262,7 +271,7 @@ public final class HyperionExtension implements Extension {
             if (speed != null) {
                 updater.update(speed, Math.clamp(state.speed(), 0f, MAX_SPEED));
             }
-        }, true);
+        }, now);
         entity.override(GeyserEntityDataTypes.SCALE, state.scale());
     }
 
