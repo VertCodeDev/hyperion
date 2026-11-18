@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.effect.Effect;
 import dev.vertcode.hyperion.api.effect.EffectOptions;
@@ -19,9 +20,11 @@ import dev.vertcode.hyperion.api.effect.EffectViewers;
 final class EffectPlay implements EffectOptions {
 
     private final Map<String, String> parameters;
+    private final List<Runnable> revealActions = new ArrayList<>();
     private final List<Runnable> endActions = new ArrayList<>();
     private final List<UUID> camera = new ArrayList<>();
     private EffectViewers viewers;
+    private @Nullable UUID owner;
 
     /**
      * Start from an effect's own viewers and parameters.
@@ -57,6 +60,20 @@ final class EffectPlay implements EffectOptions {
     }
 
     @Override
+    public EffectOptions owner(final Player player) {
+        this.owner = player.getUniqueId();
+
+        return this;
+    }
+
+    @Override
+    public EffectOptions onReveal(final Runnable action) {
+        this.revealActions.add(action);
+
+        return this;
+    }
+
+    @Override
     public EffectOptions onEnd(final Runnable action) {
         this.endActions.add(action);
 
@@ -69,6 +86,14 @@ final class EffectPlay implements EffectOptions {
 
     Map<String, String> parameters() {
         return Map.copyOf(this.parameters);
+    }
+
+    @Nullable UUID owner() {
+        return this.owner;
+    }
+
+    List<Runnable> revealActions() {
+        return List.copyOf(this.revealActions);
     }
 
     List<Runnable> endActions() {

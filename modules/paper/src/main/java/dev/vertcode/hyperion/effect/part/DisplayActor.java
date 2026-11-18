@@ -32,7 +32,9 @@ import dev.vertcode.hyperion.render.PropData;
  *
  * <p>Values every prop takes: {@code rotation} in degrees on top of its spot's facing,
  * {@code scale} as a number or {@code [x, y, z]}, {@code visible}, {@code billboard},
- * {@code brightness} (0 to 15), {@code view-range} and {@code glow-color}.
+ * {@code brightness} (0 to 15), {@code view-range}, {@code glow-color}, and {@code bob} with
+ * {@code bob-period}: how many blocks the prop rises and falls on top of its keyframes, and how
+ * many ticks one rise and fall takes.
  */
 abstract class DisplayActor implements EffectActor {
 
@@ -44,6 +46,7 @@ abstract class DisplayActor implements EffectActor {
 
     private static final float DEFAULT_VIEW_RANGE = 1f;
     private static final float EPSILON = 1.0e-4f;
+    private static final float DEFAULT_BOB_PERIOD = 40f;
 
     protected final EffectContext context;
     private final PacketMarker marker;
@@ -102,6 +105,7 @@ abstract class DisplayActor implements EffectActor {
             return;
         }
 
+        at.add(0d, bob(tick, frame), 0d);
         Quaternionf rotation = this.context.rotation(frame).mul(euler(frame.vector("rotation")));
         Vector3f scale = scale(frame);
         Vector3f translation = this.centre(rotation, scale);
@@ -175,6 +179,26 @@ abstract class DisplayActor implements EffectActor {
     @Override
     public void stop() {
         this.marker.hideAll();
+    }
+
+    /**
+     * Work out how far a prop's {@code bob} lifts it at a tick: a slow rise and fall on top of
+     * wherever its keyframes put it.
+     *
+     * @param tick the effect's tick
+     * @param frame the part's values
+     * @return the lift in blocks, 0 for a prop that does not bob
+     */
+    static double bob(final int tick, final EffectFrame frame) {
+        float height = frame.number("bob", 0f);
+        int period = Math.round(frame.number("bob-period", DEFAULT_BOB_PERIOD));
+        if (height <= 0f || period <= 0) {
+            return 0d;
+        }
+
+        double phase = (tick % period) / (double) period;
+
+        return height * (0.5d - 0.5d * Math.cos(phase * 2d * Math.PI));
     }
 
     /**

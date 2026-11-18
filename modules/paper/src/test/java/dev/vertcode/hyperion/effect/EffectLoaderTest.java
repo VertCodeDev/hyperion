@@ -89,6 +89,47 @@ class EffectLoaderTest {
     }
 
     @Test
+    void readsWhatMakesAnEffectAPlayersOwnMoment() throws InvalidConfigurationException {
+        LoadReport report = new LoadReport("test.yml");
+        Effect effect = load("""
+                breath:
+                  duration: 40
+                  ambient: true
+                  reveal: 25
+                  hide-players: 6.5
+                  parts:
+                    smoke:
+                      type: particle
+                      heavy: true
+                """, report).orElseThrow();
+
+        assertTrue(report.issues().isEmpty());
+        assertTrue(effect.ambient());
+        assertEquals(25, effect.reveal());
+        assertEquals(6.5d, effect.hidePlayers());
+        assertTrue(effect.parts().getFirst().settings().bool(EffectPart.HEAVY, false));
+    }
+
+    @Test
+    void leavesOutARevealOrRadiusItCannotUse() throws InvalidConfigurationException {
+        LoadReport report = new LoadReport("test.yml");
+        Effect effect = load("""
+                breath:
+                  duration: 40
+                  reveal: 60
+                  hide-players: -2
+                  parts:
+                    smoke:
+                      type: particle
+                """, report).orElseThrow();
+
+        assertEquals(2, report.count(IssueSeverity.WARNING));
+        assertFalse(effect.ambient());
+        assertEquals(0, effect.reveal());
+        assertEquals(0d, effect.hidePlayers());
+    }
+
+    @Test
     void refusesAnEffectWithoutADuration() throws InvalidConfigurationException {
         LoadReport report = new LoadReport("test.yml");
         Optional<Effect> effect = load("""

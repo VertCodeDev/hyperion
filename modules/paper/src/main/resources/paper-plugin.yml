@@ -92,6 +92,9 @@ permissions:
   hyperion.command.effect:
     description: Play, stop and list effects.
     default: op
+  hyperion.effects.reduced:
+    description: Go without the parts an effect marks heavy. For players who want fewer effects.
+    default: false
   hyperion.command.debug:
     description: See bones, hitboxes, locators, seats and effects on the models near you.
     default: op

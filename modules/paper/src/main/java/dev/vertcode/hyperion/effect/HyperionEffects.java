@@ -14,7 +14,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -81,6 +83,11 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
      */
     public static final String MODEL_FIELD = "hyperion_effects";
 
+    /**
+     * The permission of players who go without the parts an effect marks heavy.
+     */
+    public static final String REDUCED_PERMISSION = "hyperion.effects.reduced";
+
     private static final String TAKEN = "The effect key %s is already registered by %s";
     private static final String TYPE_TAKEN = "The part type %s is already registered by %s";
     private static final String NO_EFFECT = "No effect is named %s";
@@ -103,6 +110,9 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
     private final Map<String, LoadReport> reports = new ConcurrentHashMap<>();
     private final Map<Key, Embedded> embedded = new ConcurrentHashMap<>();
     private final Set<EffectShow> playing = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, EffectShow> owned = new ConcurrentHashMap<>();
+    private final List<Reducer> reducers = new CopyOnWriteArrayList<>();
+    private final HiddenPlayers hidden;
     private final Set<String> warned = ConcurrentHashMap.newKeySet();
     private final CameraLock cameras;
     private final DebugViews debug;
@@ -130,6 +140,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         this.blueprints = blueprints;
         this.settings = settings;
         this.cameras = new CameraLock(plugin);
+        this.hidden = new HiddenPlayers(plugin);
         for (EffectPartType type : BuiltinParts.all(new PartServices(plugin, blueprints, models, this.cameras))) {
             this.registerPartType(plugin, type);
         }
@@ -142,6 +153,15 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
      */
     public CameraLock cameras() {
         return this.cameras;
+    }
+
+    /**
+     * Return the players effects hide from their viewers.
+     *
+     * @return the hidden players
+     */
+    public HiddenPlayers hidden() {
+        return this.hidden;
     }
 
     /**
@@ -341,7 +361,34 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
     }
 
     @Override
+    public void reduceFor(final Plugin owner, final Predicate<Player> reduced) {
+        this.reducers.add(new Reducer(owner, reduced));
+    }
+
+    /**
+     * Return whether a player wants fewer effects: they have the permission, or a plugin says
+     * so.
+     *
+     * @param player the player
+     * @return true when they go without heavy parts
+     */
+    boolean reduced(final Player player) {
+        if (player.hasPermission(REDUCED_PERMISSION)) {
+            return true;
+        }
+
+        for (Reducer reducer : this.reducers) {
+            if (reducer.reduced().test(player)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
     public void unregisterAll(final Plugin owner) {
+        this.reducers.removeIf(reducer -> owner.equals(reducer.owner()));
         this.effects.values().removeIf(registered -> owner.equals(registered.owner()));
         this.parts.values().removeIf(registered -> owner.equals(registered.owner()));
         this.folders.removeIf(folder -> owner.equals(folder.owner()));
@@ -476,6 +523,15 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         options.accept(chosen);
         EffectShow show = new EffectShow(this, compiled, anchor, chosen);
         this.playing.add(show);
+        UUID owner = chosen.owner();
+        if (owner != null && !compiled.effect().ambient()) {
+            // One effect per owner: the new one takes the old one's turn.
+            EffectShow previous = this.owned.put(owner, show);
+            if (previous != null) {
+                previous.stop();
+            }
+        }
+
         Model model = EffectShow.modelOf(anchor);
         if (model != null) {
             if (!this.models.attach(model, show)) {
@@ -527,6 +583,23 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         return List.copyOf(this.playing);
     }
 
+    @Override
+    public Optional<EffectHandle> playing(final Player owner) {
+        return Optional.ofNullable(this.owned.get(owner.getUniqueId()));
+    }
+
+    @Override
+    public boolean stop(final Player owner) {
+        EffectShow show = this.owned.get(owner.getUniqueId());
+        if (show == null) {
+            return false;
+        }
+
+        show.stop();
+
+        return true;
+    }
+
     /**
      * Stop every play, as Hyperion disables.
      */
@@ -536,7 +609,9 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
         }
 
         this.playing.clear();
+        this.owned.clear();
         this.cameras.releaseAll();
+        this.hidden.showAll();
     }
 
     // Model keyframes
@@ -666,6 +741,7 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
      */
     void forget(final EffectShow show) {
         this.playing.remove(show);
+        show.owner().ifPresent(owner -> this.owned.remove(owner, show));
     }
 
     /**
@@ -692,6 +768,15 @@ public final class HyperionEffects implements EffectRegistry, ModelEffects {
      * @param folder the folder it was loaded from, or null when it was not
      */
     private record Registered(Plugin owner, Effect effect, CompiledEffect compiled, @Nullable Path folder) {
+    }
+
+    /**
+     * What a plugin says about who wants fewer effects.
+     *
+     * @param owner the plugin
+     * @param reduced answers whether a player wants fewer effects
+     */
+    private record Reducer(Plugin owner, Predicate<Player> reduced) {
     }
 
     /**

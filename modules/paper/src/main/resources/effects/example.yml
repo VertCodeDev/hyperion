@@ -24,6 +24,17 @@
 #   at: <part>          another part, such as an emitter that moves
 #   offset: [right, up, forward]  blocks from there
 #
+# Any part can be "heavy: true": players with the permission hyperion.effects.reduced, or who a
+# plugin says want fewer effects, go without it. Props (text, item, block) can "bob": blocks to
+# rise and fall, over "bob-period" ticks. A text's background fades with "alpha" (0 to 1) and
+# breathes with "pulse", a period in ticks.
+#
+# For an effect that is one player's own moment, such as a crate they open:
+#   reveal: <tick>         when it shows the prize; whoever played it can wait for that
+#   hide-players: <blocks> other players this close are hidden from its viewers meanwhile
+#   ambient: true          plays beside the player's own effect in place of taking its turn
+# Try: /hy effect play crate --here --own
+#
 # Who sees it: viewers: model (who sees the model, the default), everyone, or nearby:<radius>.
 # Parameters, written %name%, can be filled in by whoever plays the effect. With PlaceholderAPI,
 # titles, action bars, messages and commands also fill in its placeholders for each viewer, and
@@ -168,3 +179,57 @@ showcase:
         0: { offset: [-3, 2.5, 0] }
         50: { offset: [0, 2.2, 6], easing: ease-in-out }
         96: { offset: [3, 2.5, 0], easing: ease-in-out }
+
+# A crate opening: the prize rises out of the spot, turns, and is named at tick 30.
+crate:
+  duration: 80
+  viewers: nearby:24
+  reveal: 30
+  hide-players: 3
+  parameters:
+    prize: DIAMOND
+    name: "<aqua>Diamond"
+  parts:
+    prize:
+      type: item
+      item: "%prize%"
+      bob: 0.15
+      bob-period: 30
+      keyframes:
+        0: { offset: [0, 0.4, 0], scale: 0, rotation: [0, 0, 0] }
+        30: { offset: [0, 1.6, 0], scale: 1, rotation: [0, 360, 0], easing: ease-out-back }
+        70: { scale: 1, rotation: [0, 540, 0] }
+        80: { scale: 0, easing: ease-in }
+
+    label:
+      type: text
+      text: "%name%"
+      billboard: center
+      background: "#A0101018"
+      pulse: 30
+      offset: [0, 2.3, 0]
+      keyframes:
+        0: { visible: false }
+        30: { visible: true, alpha: 0, scale: 0.6 }
+        40: { alpha: 1, scale: 1, easing: ease-out }
+        70: { alpha: 1 }
+        80: { alpha: 0 }
+
+    sparks:
+      type: particle
+      heavy: true
+      particle: END_ROD
+      shape: ring
+      count: 10
+      every: 2
+      offset: [0, 0.3, 0]
+      keyframes:
+        0: { radius: 0.3 }
+        30: { radius: 1.2, easing: ease-out }
+        32: { visible: false }
+
+    sounds:
+      type: sound
+      keyframes:
+        0: { sound: block.chest.open, pitch: 0.8 }
+        30: { sound: entity.player.levelup, pitch: 1.3 }

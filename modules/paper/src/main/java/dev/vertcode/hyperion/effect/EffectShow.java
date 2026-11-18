@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -28,6 +29,7 @@ import dev.vertcode.hyperion.api.effect.EffectPart;
 import dev.vertcode.hyperion.api.effect.EffectPartType;
 import dev.vertcode.hyperion.api.effect.EffectViewers;
 import dev.vertcode.hyperion.api.event.EffectEndEvent;
+import dev.vertcode.hyperion.api.event.EffectRevealEvent;
 import dev.vertcode.hyperion.api.event.EffectStartEvent;
 import dev.vertcode.hyperion.api.model.Model;
 import dev.vertcode.hyperion.api.model.bone.Bone;
@@ -56,18 +58,23 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     private final EffectAnchor anchor;
     private final EffectViewers viewers;
     private final Map<String, String> parameters;
+    private final @Nullable UUID owner;
+    private final List<Runnable> revealActions;
     private final List<Runnable> endActions;
     private final List<UUID> camera;
     private final @Nullable EffectActor[] actors;
     private final Map<String, @Nullable Placement> placements = new HashMap<>();
     private volatile boolean playing = true;
     private volatile boolean stopWanted;
+    private volatile boolean revealed;
     private volatile int shownTick;
     private int tick;
     private volatile Location location;
     private boolean started;
     private int cursor;
     private @Nullable List<Player> viewersNow;
+    private @Nullable List<Player> fullViewersNow;
+    private @Nullable List<HiddenPlayers.Pair> hidden;
     private @Nullable DebugLabels debugLabels;
 
     /**
@@ -89,6 +96,8 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
         this.anchor = anchor;
         this.viewers = options.viewers();
         this.parameters = options.parameters();
+        this.owner = options.owner();
+        this.revealActions = options.revealActions();
         this.endActions = options.endActions();
         this.camera = options.camera();
         this.actors = new EffectActor[compiled.effect().parts().size()];
@@ -109,7 +118,7 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
         }
 
         Placement here = place(this.anchor);
-        if (this.stopWanted || here == null) {
+        if (this.stopWanted || here == null || this.ownerLeft()) {
             this.end(false);
             return false;
         }
@@ -118,6 +127,11 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
         this.placements.clear();
         this.placements.put(ANCHOR, here);
         this.viewersNow = null;
+        this.fullViewersNow = null;
+        if (this.hidden == null) {
+            this.hidden = this.hideCrowd();
+        }
+
         List<CompiledEffect.Step> steps = this.compiled.steps();
         while (this.cursor < steps.size() && steps.get(this.cursor).tick() <= this.tick) {
             CompiledEffect.Step step = steps.get(this.cursor++);
@@ -131,6 +145,10 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
                     this.act(part, frame);
                 }
             }
+        }
+
+        if (!this.revealed && this.tick >= this.compiled.effect().reveal()) {
+            this.reveal();
         }
 
         if (this.debugLabels != null || this.effects.debug().watching()) {
@@ -169,7 +187,9 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
                 continue;
             }
 
-            this.actors[i] = type.create(part, this);
+            // A heavy part plays for everyone but the viewers who want fewer effects.
+            EffectContext context = part.settings().bool(EffectPart.HEAVY, false) ? new ReducedContext(this) : this;
+            this.actors[i] = type.create(part, context);
         }
 
         Bukkit.getPluginManager().callEvent(new EffectStartEvent(this));
@@ -219,6 +239,15 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
             this.debugLabels = null;
         }
 
+        if (this.hidden != null) {
+            this.effects.hidden().show(this.hidden);
+        }
+
+        // News held back for the reveal is never lost, however early the effect ends.
+        if (!this.revealed) {
+            this.reveal();
+        }
+
         if (this.started) {
             Bukkit.getPluginManager().callEvent(new EffectEndEvent(this, finished));
         }
@@ -233,6 +262,48 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     @Override
     public void cancel() {
         this.end(false);
+    }
+
+    /**
+     * Show what the effect is about: tell listeners and run the play's reveal actions, once.
+     */
+    private void reveal() {
+        this.revealed = true;
+        if (this.started && this.compiled.effect().reveal() > 0) {
+            Bukkit.getPluginManager().callEvent(new EffectRevealEvent(this));
+        }
+
+        for (Runnable action : this.revealActions) {
+            action.run();
+        }
+    }
+
+    /**
+     * Return whether the play's owner is gone.
+     *
+     * @return true when it has an owner who is no longer online
+     */
+    private boolean ownerLeft() {
+        return this.owner != null && Bukkit.getPlayer(this.owner) == null;
+    }
+
+    /**
+     * Hide the players around where the effect starts from its viewers, when the effect asks.
+     * The owner is never hidden.
+     *
+     * @return what was hidden, empty when the effect hides nobody
+     */
+    private List<HiddenPlayers.Pair> hideCrowd() {
+        double radius = this.compiled.effect().hidePlayers();
+        Location at = this.location;
+        if (radius <= 0d || at.getWorld() == null) {
+            return List.of();
+        }
+
+        List<Player> crowd = new ArrayList<>(at.getWorld().getNearbyPlayers(at, radius));
+        crowd.removeIf(player -> player.getUniqueId().equals(this.owner));
+
+        return this.effects.hidden().hide(this.viewers(), crowd);
     }
 
     /**
@@ -264,10 +335,17 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     }
 
     /**
-     * Drop a play that never got to run, as when its anchor was already gone.
+     * Drop a play that never got to run, as when its anchor was already gone. Its reveal and end
+     * actions still run, here on the calling thread, so what a caller holds back for them is not
+     * lost.
      */
     void abandon() {
         this.playing = false;
+        this.reveal();
+        for (Runnable action : this.endActions) {
+            action.run();
+        }
+
         this.effects.forget(this);
     }
 
@@ -422,11 +500,45 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     public List<Player> viewers() {
         List<Player> current = this.viewersNow;
         if (current == null) {
-            current = this.collectViewers();
+            current = this.withOwner(this.collectViewers());
             this.viewersNow = current;
         }
 
         return current;
+    }
+
+    /**
+     * Return who sees and hears the effect's heavy parts this tick: its viewers without those
+     * who want fewer effects.
+     *
+     * @return the players
+     */
+    List<Player> fullViewers() {
+        List<Player> current = this.fullViewersNow;
+        if (current == null) {
+            current = this.viewers().stream().filter(player -> !this.effects.reduced(player)).toList();
+            this.fullViewersNow = current;
+        }
+
+        return current;
+    }
+
+    /**
+     * Add the play's owner to its viewers: an effect is always seen by the player it belongs to.
+     *
+     * @param viewers who sees the effect
+     * @return the viewers, with the owner when they are in the effect's world
+     */
+    private List<Player> withOwner(final List<Player> viewers) {
+        Player player = this.owner == null ? null : Bukkit.getPlayer(this.owner);
+        if (player == null || viewers.contains(player) || !player.getWorld().equals(this.location.getWorld())) {
+            return viewers;
+        }
+
+        List<Player> all = new ArrayList<>(viewers);
+        all.add(player);
+
+        return List.copyOf(all);
     }
 
     /**
@@ -526,6 +638,16 @@ final class EffectShow implements EffectHandle, EffectContext, ModelTask {
     @Override
     public int tick() {
         return this.shownTick;
+    }
+
+    @Override
+    public Optional<UUID> owner() {
+        return Optional.ofNullable(this.owner);
+    }
+
+    @Override
+    public boolean revealed() {
+        return this.revealed;
     }
 
     @Override

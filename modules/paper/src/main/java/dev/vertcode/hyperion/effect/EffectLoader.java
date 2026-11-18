@@ -49,6 +49,8 @@ public final class EffectLoader {
     private static final String NOT_A_SECTION = "is not a section of keys";
     private static final String BAD_DURATION = "needs a duration of at least 1 tick";
     private static final String BAD_VIEWERS = "has viewers '%s'; use model, everyone or nearby:<radius>";
+    private static final String BAD_REVEAL = "has 'reveal: %s'; use a tick from 0 to its duration of %d";
+    private static final String BAD_HIDE_PLAYERS = "has 'hide-players: %s'; use a radius in blocks, 0 or above";
     private static final String NO_PARTS = "has no parts";
     private static final String BAD_TYPE = "has type '%s', which is not a part type";
     private static final String UNKNOWN_TYPE = "has type %s, which no plugin registered; it is skipped";
@@ -111,8 +113,56 @@ public final class EffectLoader {
         }
 
         boolean loop = section.get("loop") instanceof Boolean flag && flag;
+        boolean ambient = section.get("ambient") instanceof Boolean flag && flag;
+        int reveal = reveal(section.get("reveal"), duration, where, report);
+        double hidePlayers = hidePlayers(section.get("hide-players"), where, report);
 
-        return Optional.of(new Effect(key, duration, loop, viewers, parameters, parts));
+        return Optional.of(new Effect(key, duration, loop, ambient, reveal, hidePlayers, viewers, parameters, parts));
+    }
+
+    /**
+     * Read the tick an effect shows what it is about.
+     *
+     * @param value the {@code reveal} value, or null for none
+     * @param duration how long the effect lasts
+     * @param where the effect, for warnings
+     * @param report where problems go
+     * @return the tick, 0 when there is none or it cannot be used
+     */
+    private static int reveal(final @Nullable Object value, final int duration, final String where, final LoadReport report) {
+        if (value == null) {
+            return 0;
+        }
+
+        if (value instanceof Number number && number.intValue() >= 0 && number.intValue() <= duration) {
+            return number.intValue();
+        }
+
+        report.warn(where, String.format(BAD_REVEAL, value, duration));
+
+        return 0;
+    }
+
+    /**
+     * Read how far around an effect other players are hidden.
+     *
+     * @param value the {@code hide-players} value, or null for none
+     * @param where the effect, for warnings
+     * @param report where problems go
+     * @return the radius in blocks, 0 when there is none or it cannot be used
+     */
+    private static double hidePlayers(final @Nullable Object value, final String where, final LoadReport report) {
+        if (value == null) {
+            return 0d;
+        }
+
+        if (value instanceof Number number && number.doubleValue() >= 0d) {
+            return number.doubleValue();
+        }
+
+        report.warn(where, String.format(BAD_HIDE_PLAYERS, value));
+
+        return 0d;
     }
 
     /**

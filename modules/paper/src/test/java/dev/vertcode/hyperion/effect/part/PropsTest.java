@@ -35,4 +35,31 @@ class PropsTest {
         assertEquals(0xFF00FF00, TextActor.argb("00FF00"));
         assertEquals(0x40000000, TextActor.argb("nope"));
     }
+
+    @Test
+    void bobsAPropUpAndBackDown() {
+        EffectFrame frame = new EffectFrame(Map.of("bob", 0.5f, "bob-period", 20f));
+
+        assertEquals(0d, DisplayActor.bob(0, frame), EPSILON);
+        assertEquals(0.5d, DisplayActor.bob(10, frame), EPSILON);
+        assertEquals(0d, DisplayActor.bob(20, frame), EPSILON);
+        assertEquals(0d, DisplayActor.bob(10, EffectFrame.EMPTY), EPSILON);
+    }
+
+    @Test
+    void fadesATextBackgroundWithItsAlpha() {
+        EffectFrame half = new EffectFrame(Map.of("background", "#80FF0000", "alpha", 0.5f));
+
+        assertEquals(0x40FF0000, TextActor.background(0, half));
+        assertEquals(0x80FF0000, TextActor.background(0, new EffectFrame(Map.of("background", "#80FF0000"))));
+        assertEquals(0x00FF0000, TextActor.background(0, new EffectFrame(Map.of("background", "#80FF0000", "alpha", 0f))));
+    }
+
+    @Test
+    void pulsesATextBackgroundDownToItsFloor() {
+        EffectFrame frame = new EffectFrame(Map.of("background", "#80FF0000", "pulse", 20f, "pulse-floor", 0.5f));
+
+        assertEquals(0x80FF0000, TextActor.background(0, frame));
+        assertEquals(0x40FF0000, TextActor.background(10, frame));
+    }
 }

@@ -182,7 +182,7 @@ public final class HyperionPlugin extends JavaPlugin {
         this.previews = previews;
         events.registerEvents(new ModelListener(models, modelRegistry, behaviors, effects, this, menus), this);
         events.registerEvents(new SeatListener(models), this);
-        events.registerEvents(new EffectListener(effects.cameras()), this);
+        events.registerEvents(new EffectListener(effects.cameras(), effects.hidden()), this);
         events.registerEvents(new StaffToolListener(debug, previews), this);
         events.registerEvents(new ArmorListener(armorTracker), this);
         events.registerEvents(new PlayerAnimationListener(playerAnimations, skins, registry), this);

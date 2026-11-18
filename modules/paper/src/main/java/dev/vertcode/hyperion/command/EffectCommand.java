@@ -66,6 +66,7 @@ public final class EffectCommand {
      * @param name the effect's key, {@code hyperion:} when left out
      * @param here true to play it where the player stands, even near a model
      * @param camera true to let the effect's camera take the player's view
+     * @param own true to play it as the player's own, in place of the one they owned before
      */
     @Command(HyperionCommands.ROOT + " effect play <effect>")
     @CommandDescription("Play an effect on the model nearest to you, or where you stand")
@@ -74,7 +75,8 @@ public final class EffectCommand {
             final PlayerSource source,
             @Argument(value = "effect", suggestions = SUGGESTIONS) final String name,
             @Flag("here") final boolean here,
-            @Flag("camera") final boolean camera
+            @Flag("camera") final boolean camera,
+            @Flag("own") final boolean own
     ) {
         Player player = source.source();
         Key key = key(name);
@@ -90,6 +92,10 @@ public final class EffectCommand {
         this.effects.play(effect, anchor, options -> {
             if (camera) {
                 options.camera(player);
+            }
+
+            if (own) {
+                options.owner(player);
             }
         });
 
