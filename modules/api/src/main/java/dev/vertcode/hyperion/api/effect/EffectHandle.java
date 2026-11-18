@@ -1,5 +1,8 @@
 package dev.vertcode.hyperion.api.effect;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import org.bukkit.Location;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -38,6 +41,21 @@ public interface EffectHandle {
      * @return the ticks, counted from 0 again on every loop
      */
     int tick();
+
+    /**
+     * Return the player the play belongs to.
+     *
+     * @return the owner's id, or empty when the play named none
+     * @see EffectOptions#owner
+     */
+    Optional<UUID> owner();
+
+    /**
+     * Return whether the effect has shown what it is about.
+     *
+     * @return true from its {@linkplain Effect#reveal() reveal} tick on
+     */
+    boolean revealed();
 
     /**
      * Return whether the effect still plays.

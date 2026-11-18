@@ -5,8 +5,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import net.kyori.adventure.key.Key;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Unmodifiable;
@@ -57,6 +59,21 @@ public interface EffectRegistry {
      * @throws IllegalArgumentException if another type already uses the key
      */
     void registerPartType(Plugin owner, EffectPartType type);
+
+    /**
+     * Tell Hyperion which players want fewer effects, such as those who turned a setting of your
+     * plugin down. They do not see or hear the parts an effect marks {@code heavy: true}. Players
+     * with the permission {@code hyperion.effects.reduced} never do. It goes when the plugin
+     * disables.
+     *
+     * <pre>{@code
+     * Hyperion.effects().reduceFor(this, player -> settings.of(player).lowPerformance());
+     * }</pre>
+     *
+     * @param owner the plugin it belongs to
+     * @param reduced answers whether a player wants fewer effects, from any thread
+     */
+    void reduceFor(Plugin owner, Predicate<Player> reduced);
 
     /**
      * Remove everything a plugin added. Hyperion calls this when the plugin disables.
@@ -117,4 +134,21 @@ public interface EffectRegistry {
      * @return the handles
      */
     @Unmodifiable List<EffectHandle> playing();
+
+    /**
+     * Return the effect a player owns now.
+     *
+     * @param owner the player
+     * @return the handle, or empty when they own none; ambient effects are never returned
+     * @see EffectOptions#owner
+     */
+    Optional<EffectHandle> playing(Player owner);
+
+    /**
+     * Stop the effect a player owns.
+     *
+     * @param owner the player
+     * @return true when they owned one
+     */
+    boolean stop(Player owner);
 }

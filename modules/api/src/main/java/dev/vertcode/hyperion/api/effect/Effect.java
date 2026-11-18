@@ -28,6 +28,9 @@ import net.kyori.adventure.key.Keyed;
  * @param key the effect's key
  * @param duration how long one run lasts, in ticks
  * @param loop whether it starts over at its end until stopped
+ * @param ambient whether it plays beside its owner's other effect, see {@link EffectOptions#owner}
+ * @param reveal the tick it shows what it is about, 0 when it gives nothing away
+ * @param hidePlayers how far around it other players are hidden from its viewers, 0 for none
  * @param viewers who sees and hears it, unless a play chooses otherwise
  * @param parameters the default value of every {@code %parameter%}
  * @param parts the parts
@@ -36,22 +39,36 @@ public record Effect(
         Key key,
         int duration,
         boolean loop,
+        boolean ambient,
+        int reveal,
+        double hidePlayers,
         EffectViewers viewers,
         Map<String, String> parameters,
         List<EffectPart> parts
 ) implements Keyed {
 
     private static final String NOT_POSITIVE = "An effect must last at least 1 tick, got %d";
+    private static final String BAD_REVEAL = "The effect %s reveals at tick %d, outside its %d ticks";
+    private static final String BAD_RADIUS = "The effect %s hides players within %s blocks, which is below 0";
     private static final String TWICE = "The effect %s has two parts named '%s'";
 
     /**
      * Check the effect and copy its collections.
      *
-     * @throws IllegalArgumentException if the duration is below 1 or two parts share a name
+     * @throws IllegalArgumentException if the duration is below 1, the reveal is outside the
+     *     effect, the radius is below 0 or two parts share a name
      */
     public Effect {
         if (duration < 1) {
             throw new IllegalArgumentException(String.format(NOT_POSITIVE, duration));
+        }
+
+        if (reveal < 0 || reveal > duration) {
+            throw new IllegalArgumentException(String.format(BAD_REVEAL, key.asString(), reveal, duration));
+        }
+
+        if (!(hidePlayers >= 0d)) {
+            throw new IllegalArgumentException(String.format(BAD_RADIUS, key.asString(), hidePlayers));
         }
 
         Set<String> names = new HashSet<>();
@@ -86,6 +103,9 @@ public record Effect(
         private final Map<String, String> parameters = new LinkedHashMap<>();
         private final List<EffectPart> parts = new ArrayList<>();
         private boolean loop;
+        private boolean ambient;
+        private int reveal;
+        private double hidePlayers;
         private EffectViewers viewers = EffectViewers.model();
 
         private Builder(final Key key, final int duration) {
@@ -101,6 +121,46 @@ public record Effect(
          */
         public Builder loop(final boolean loop) {
             this.loop = loop;
+
+            return this;
+        }
+
+        /**
+         * Let it play beside its owner's other effect, in place of taking that effect's turn.
+         * Use it for small things that pile up, such as a number popping out of a block.
+         *
+         * @param ambient true to play beside
+         * @return this builder
+         * @see EffectOptions#owner
+         */
+        public Builder ambient(final boolean ambient) {
+            this.ambient = ambient;
+
+            return this;
+        }
+
+        /**
+         * Name the tick the effect shows what it is about, such as the prize of a crate. A play's
+         * {@link EffectOptions#onReveal} runs then, so chat never spoils the moment.
+         *
+         * @param tick the tick, from 0 to the duration
+         * @return this builder
+         */
+        public Builder reveal(final int tick) {
+            this.reveal = tick;
+
+            return this;
+        }
+
+        /**
+         * Hide the other players around the effect from its viewers while it plays, so nobody
+         * stands in the middle of the moment.
+         *
+         * @param radius blocks around where the effect starts, 0 for none
+         * @return this builder
+         */
+        public Builder hidePlayers(final double radius) {
+            this.hidePlayers = radius;
 
             return this;
         }
@@ -156,10 +216,21 @@ public record Effect(
          * Build the effect.
          *
          * @return the effect
-         * @throws IllegalArgumentException if the duration is below 1 or two parts share a name
+         * @throws IllegalArgumentException if the duration is below 1, the reveal is outside the
+         *     effect, the radius is below 0 or two parts share a name
          */
         public Effect build() {
-            return new Effect(this.key, this.duration, this.loop, this.viewers, this.parameters, this.parts);
+            return new Effect(
+                    this.key,
+                    this.duration,
+                    this.loop,
+                    this.ambient,
+                    this.reveal,
+                    this.hidePlayers,
+                    this.viewers,
+                    this.parameters,
+                    this.parts
+            );
         }
     }
 }

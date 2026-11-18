@@ -13,9 +13,10 @@ import net.kyori.adventure.key.Key;
  * One track of an effect: a particle emitter, a sound, a burst, an event, or a type a plugin
  * registered, with its settings and keyframes.
  *
- * <p>The settings are where the part starts; each keyframe lays its values over them. Two
+ * <p>The settings are where the part starts; each keyframe lays its values over them. Three
  * settings mean the same for every type: {@code at}, where the part is ({@code anchor},
- * {@code bone:<name>}, {@code locator:<name>} or another part's name), and {@code offset}.
+ * {@code bone:<name>}, {@code locator:<name>} or another part's name), {@code offset}, and
+ * {@link #HEAVY}.
  *
  * @param name the part's name, unique in its effect
  * @param type the part type's key, such as {@link #PARTICLE}
@@ -94,6 +95,14 @@ public record EffectPart(String name, Key type, EffectFrame settings, List<Effec
      * A camera that moves the view of the players a play names along its keyframes.
      */
     public static final Key CAMERA = Key.key("hyperion", "camera");
+
+    /**
+     * The setting that marks a part as one players who want fewer effects go without:
+     * {@code heavy: true}.
+     *
+     * @see EffectRegistry#reduceFor
+     */
+    public static final String HEAVY = "heavy";
 
     /**
      * Sort the keyframes by tick and copy them.
