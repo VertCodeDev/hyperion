@@ -49,7 +49,7 @@ not a new Hyperion release. Hyperion does not start without it.
 | `ui` | The model menu, the `Gallery` with its `Previews`, and `Menus`, which loads the InvUI module that fits the server |
 | `debug` | `DebugViews` (who has which view on, drawn from inside model and effect frames), the particle shapes, and `DebugLabels`, the floating names |
 | `bedrock` | Telling Bedrock players apart, the Bedrock pack, and the link the Geyser extension follows |
-| `effect` | `HyperionEffects` (loading, finding and playing effects), `EffectLoader` (YAML and model JSON into effects), `CompiledEffect` (an effect's steps, built once) and `EffectShow` (one play) |
+| `effect` | `HyperionEffects` (loading, finding and playing effects), `EffectLoader` (YAML and model JSON into effects), `CompiledEffect` (an effect's steps, built once), `EffectShow` (one play), `HiddenPlayers` (who effects hide from their viewers) and `ReducedContext` (a heavy part's view of its play) |
 | `effect.part` | The part types Hyperion ships: particle emitters with their shapes, sounds, bursts, events, text, item, block and model props, screen steps and the camera, with `CameraLock` for the players a camera holds |
 
 ## Models
@@ -87,7 +87,7 @@ The root is `/hyperion`, with the aliases `/hyp` and `/hy`.
 | `/hy remove [radius]` | `hyperion.command.remove` | Remove the nearest model, or every model within the radius |
 | `/hy animate play <animation> [speed]` | `hyperion.command.animate` | Play an animation on the nearest model |
 | `/hy animate stop [animation]` | `hyperion.command.animate` | Stop one animation, or all of them, on the nearest model |
-| `/hy effect play <effect> [--here] [--camera]` | `hyperion.command.effect` | Play an effect on the nearest model, or where you stand; `--camera` lets its camera take your view |
+| `/hy effect play <effect> [--here] [--camera] [--own]` | `hyperion.command.effect` | Play an effect on the nearest model, or where you stand; `--camera` lets its camera take your view, `--own` plays it as your own |
 | `/hy effect stop` | `hyperion.command.effect` | Stop every effect within 16 blocks |
 | `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
 | `/hy debug [view]` | `hyperion.command.debug` | Show or hide `bones`, `hitboxes`, `locators`, `seats` or `effects` on what is near you, `all` or `off`; without a view, which are on |
@@ -114,7 +114,8 @@ Sneaking and right-clicking a model on a mob opens its menu (`hyperion.menu`): i
 play once (left-click), loop (right-click) or stop (shift-click), and controls to freeze the mob,
 switch its idle and walk animations, stop every animation, scale it, make it glow and remove it.
 
-`hyperion.admin` grants every Hyperion permission. Every node defaults to operators.
+`hyperion.admin` grants every command permission. Every node defaults to operators, but
+`hyperion.effects.reduced`, which nobody has until it is given and `hyperion.admin` leaves out.
 
 ## Debug views
 
@@ -378,6 +379,23 @@ sees through a display only they know about while they stay where they stand, in
 gamemode, kept from walking and jumping by a modifier the server never saves. The view goes back
 when the camera hides, the effect ends, they sneak on a `skippable` camera, or they die, change
 worlds or leave. With `safe` (the default) they take no damage meanwhile.
+
+**A player's own effect.** A play can name an owner (`EffectOptions#owner`, or `--own` on the
+command). The owner always sees it, it ends when they leave, and it stops the effect they owned
+before unless it is `ambient`. `reveal` is the tick an effect shows what it is about:
+`EffectOptions#onReveal` and `EffectRevealEvent` run then, or as the effect ends when it was
+stopped sooner. `hide-players` hides the players around where the effect starts from its viewers
+until it ends; `HiddenPlayers` counts the hides, so two effects over one crowd give a player back
+only when the second ends, and a player who leaves is shown again at once.
+
+**Fewer effects.** A part with `heavy: true` is not played to players who want fewer effects:
+those with the permission `hyperion.effects.reduced`, and those a plugin names through
+`EffectRegistry#reduceFor`. The part gets a `ReducedContext`, whose viewers leave them out, so
+no part type has to know.
+
+**Props.** `bob` and `bob-period` make a text, item or block prop rise and fall on top of its
+keyframes. A text's background fades with `alpha` and breathes with `pulse` and `pulse-floor`,
+sent at most every other tick.
 
 An effect on a model plays inside the model's frame, after the bones moved; one on an entity or
 a spot runs on that entity's or region's scheduler. Particles and sounds go to each viewer as

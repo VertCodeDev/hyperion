@@ -57,6 +57,7 @@ public void onKeyframe(AnimationKeyframeEvent event) {
 | Event | When | Useful methods |
 |---|---|---|
 | `EffectStartEvent` | An effect started playing | `effect()` |
+| `EffectRevealEvent` | An effect passed its `reveal` tick, or ended before it | `effect()` |
 | `EffectEndEvent` | An effect ended or was stopped | `effect()`, `finished()` |
 | `EffectKeyframeEvent` | An effect passed a keyframe of an `event` part | `effect()`, `name()`, `location()` |
 

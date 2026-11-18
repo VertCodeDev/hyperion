@@ -2,7 +2,8 @@
 
 The root command is `/hyperion`, with the aliases `/hyp` and `/hy`.
 
-Every permission defaults to operators. `hyperion.admin` grants all of them.
+Every permission defaults to operators, and `hyperion.admin` grants all of them. The one exception
+is `hyperion.effects.reduced`: nobody has it until it is given, and `hyperion.admin` leaves it out.
 
 A model or effect argument may leave out `hyperion:`, so `/hy info bosses/dragon` works. Optional
 values suggest themselves while you type: scales, speeds, radii and mob names.
@@ -33,7 +34,7 @@ values suggest themselves while you type: scales, speeds, radii and mob names.
 |---|---|---|
 | `/hy animate play <animation> [speed]` | `hyperion.command.animate` | Plays an animation on the nearest model |
 | `/hy animate stop [animation]` | `hyperion.command.animate` | Stops one animation, or all of them, on the nearest model |
-| `/hy effect play <effect> [--here] [--camera]` | `hyperion.command.effect` | Plays an effect on the nearest model, or where you stand. `--camera` lets its camera take your view. |
+| `/hy effect play <effect> [--here] [--camera] [--own]` | `hyperion.command.effect` | Plays an effect on the nearest model, or where you stand. `--camera` lets its camera take your view. `--own` plays it as your own, in place of the one you owned before. |
 | `/hy effect stop` | `hyperion.command.effect` | Stops every effect within 16 blocks |
 | `/hy effect list [--page <page>]` | `hyperion.command.effect` | Every loaded effect, each a click away from playing it |
 
@@ -89,6 +90,7 @@ playing effects `hyperion.command.effect`, and giving armor `hyperion.command.ar
 | `hyperion.command.remove` | `/hy near`, `/hy remove` |
 | `hyperion.command.animate` | `/hy animate` |
 | `hyperion.command.effect` | `/hy effect` |
+| `hyperion.effects.reduced` | Not a command: the player goes without the parts an effect marks `heavy`. Off for everyone by default, operators included. |
 | `hyperion.command.debug` | `/hy debug` |
 | `hyperion.command.gallery` | `/hy gallery` |
 | `hyperion.command.armor` | `/hy armor` |

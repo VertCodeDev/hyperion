@@ -6,8 +6,8 @@ Blockbench locator, an entity or a spot in the world.
 ## Where effects live
 
 Every top-level section of a `.yml` file in `plugins/Hyperion/effects` is one effect, played as
-`hyperion:<section>`. The first start writes `example.yml`, with every option explained and five
-effects to try.
+`hyperion:<section>`. The first start writes `example.yml`, with every option explained and six
+effects to try. A server that already has the folder keeps its own `example.yml`.
 
 ```yaml
 level_up:
@@ -79,6 +79,68 @@ viewers: nearby:32    # players within 32 blocks
 viewers: everyone
 ```
 
+## Props that move on their own
+
+A `text`, `item` or `block` prop can rise and fall on top of its keyframes:
+
+```yaml
+bob: 0.15         # blocks it rises
+bob-period: 30    # ticks for one rise and fall (40 when left out)
+```
+
+A text's background can fade and breathe:
+
+```yaml
+background: "#A0101018"
+alpha: 0.5        # 0 to 1, how solid the background is. Eases between keyframes.
+pulse: 30         # ticks for one dim and back
+pulse-floor: 0.3  # how far it dims, as a part of itself (0.3 when left out)
+```
+
+## Heavy parts
+
+Mark the costly parts of an effect, and players who want fewer effects go without them:
+
+```yaml
+sparks:
+  type: particle
+  heavy: true
+```
+
+A player wants fewer effects when they have the permission `hyperion.effects.reduced`, or when
+another plugin says so through the [API](API-Effects#players-who-want-fewer-effects). The
+permission is off for everyone by default, operators included. A plugin that gives a player every
+permission (`*`) also gives them this one.
+
+## A player's own effect
+
+Some effects are one player's moment, such as a crate they open. An effect played as a player's
+own:
+
+- is always seen and heard by that player,
+- ends when they leave,
+- takes the turn of the effect they owned before, which stops.
+
+Plugins choose the owner when they play an effect. To try it: `/hy effect play <effect> --own`.
+
+Three settings of an effect go with it:
+
+```yaml
+crate:
+  duration: 80
+  reveal: 30          # the tick it shows the prize
+  hide-players: 3     # other players this close are hidden from its viewers meanwhile
+  ambient: false      # true: plays beside the owner's effect in place of taking its turn
+```
+
+- **`reveal`** tells the plugin that played the effect when the prize shows, so it can hold its
+  chat message back until then.
+- **`hide-players`** hides the players within that many blocks of where the effect starts, from
+  everyone who sees it when it starts. The owner is never hidden. They come back when it ends.
+- **`ambient`** is for small effects that pile up, such as a number popping out of a block.
+
+The `crate` effect in `example.yml` uses all of this.
+
 ## Parameters
 
 An effect can have values that whoever plays it fills in:
@@ -130,6 +192,7 @@ change worlds or leave. By default the player takes no damage meanwhile.
 | `/hy effect play <effect>` | Plays an effect on the nearest model |
 | `/hy effect play <effect> --here` | Plays it where you stand |
 | `/hy effect play <effect> --camera` | Lets its camera take your view |
+| `/hy effect play <effect> --own` | Plays it as your own, in place of the one you owned before |
 | `/hy effect stop` | Stops every effect within 16 blocks |
 | `/hy effect list` | Lists every loaded effect, each a click away from playing it |
 

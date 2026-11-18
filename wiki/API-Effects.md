@@ -40,6 +40,8 @@ Hyperion.effects().play(Key.key("hyperion", "aura"), EffectAnchor.on(player), op
 | `parameter(name, value)` | Fills in a `%name%` of the effect |
 | `viewers(EffectViewers)` | Who sees it: `model()`, `nearby(radius)`, `everyone()` or `only(uuid)` |
 | `camera(players...)` | The players whose view the effect's camera takes |
+| `owner(player)` | Makes the play that player's own, see [A player's own effect](#a-players-own-effect) |
+| `onReveal(Runnable)` | Something to run when the effect shows what it is about |
 | `onEnd(Runnable)` | Something to run when it ends |
 
 `EffectViewers.only(uuid)` makes a private effect, such as a quest marker one player sees.
@@ -50,10 +52,53 @@ Hyperion.effects().play(Key.key("hyperion", "aura"), EffectAnchor.on(player), op
 handle.isPlaying();
 handle.tick();        // how far along it is
 handle.location();    // where it is now
+handle.owner();       // the player it belongs to, when the play named one
+handle.revealed();    // whether it has passed its reveal tick
 handle.stop();
 ```
 
 A looping effect plays until you stop it, so keep its handle.
+
+## A player's own effect
+
+Name an owner for an effect that is one player's moment, such as a crate they open:
+
+```java
+Hyperion.effects().play(Key.key("crates", "open"), EffectAnchor.at(crate), options -> options
+        .owner(player)
+        .parameter("name", prize.name())
+        .onReveal(() -> announce(player, prize))
+        .onEnd(() -> give(player, prize)));
+```
+
+The owner always sees and hears the effect, and it ends when they leave. A player owns one effect
+at a time: a new one stops the one before. An effect with `ambient: true` plays beside it.
+
+```java
+Hyperion.effects().playing(player);   // the effect they own now, if any
+Hyperion.effects().stop(player);      // stop it
+```
+
+`onReveal` runs at the effect's `reveal` tick, so chat never spoils the moment. It runs once, and
+it still runs as the effect ends when the effect was stopped sooner, so what you hold back for it
+is never lost. An effect without a `reveal` tick reveals as it starts. `onReveal` and `onEnd` also
+run when the effect could not start because its anchor was already gone.
+
+In an effect built in code, the same settings are `Effect.Builder#reveal`, `hidePlayers` and
+`ambient`.
+
+## Players who want fewer effects
+
+Parts marked `heavy: true` are not shown to players who want fewer effects. Tell Hyperion who they
+are, such as the players who turned a setting of your plugin down:
+
+```java
+Hyperion.effects().reduceFor(this, player -> settings.of(player).lowPerformance());
+```
+
+The check runs on the thread the effect plays on, so it must be safe from any thread. Your own
+part types need nothing extra: `context.viewers()` already leaves those players out for a heavy
+part.
 
 ## Cutscenes
 
