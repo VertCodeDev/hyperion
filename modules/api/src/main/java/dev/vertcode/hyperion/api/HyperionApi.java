@@ -1,6 +1,10 @@
 package dev.vertcode.hyperion.api;
 
+import java.util.function.Function;
+
+import org.bukkit.World;
 import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
 
 import dev.vertcode.hyperion.api.armor.ArmorRegistry;
 import dev.vertcode.hyperion.api.effect.EffectRegistry;
@@ -75,4 +79,13 @@ public interface HyperionApi {
      * @return the player animations
      */
     PlayerAnimations playerAnimations();
+
+    /**
+     * Count worlds that are copies of one another as one world. A model that stands in one copy is
+     * then shown, at the same spot, to players in every other copy too, as if they stood in its
+     * own world. Worlds with the same group name are copies of one world.
+     *
+     * @param groupOf the group name of a world, or {@code null} to make every world its own again
+     */
+    void worldGroups(@Nullable Function<World, String> groupOf);
 }

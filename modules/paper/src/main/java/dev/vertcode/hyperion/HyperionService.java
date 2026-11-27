@@ -1,5 +1,10 @@
 package dev.vertcode.hyperion;
 
+import java.util.function.Function;
+
+import org.bukkit.World;
+import org.jspecify.annotations.Nullable;
+
 import dev.vertcode.hyperion.api.HyperionApi;
 import dev.vertcode.hyperion.api.armor.ArmorRegistry;
 import dev.vertcode.hyperion.api.effect.EffectRegistry;
@@ -9,6 +14,7 @@ import dev.vertcode.hyperion.api.model.ModelTracker;
 import dev.vertcode.hyperion.api.model.behavior.BehaviorRegistry;
 import dev.vertcode.hyperion.api.model.source.FormatRegistry;
 import dev.vertcode.hyperion.api.skin.SkinService;
+import dev.vertcode.hyperion.model.WorldLinks;
 
 /**
  * The api Hyperion installs for other plugins on enable.
@@ -32,4 +38,9 @@ record HyperionService(
         SkinService skins,
         PlayerAnimations playerAnimations
 ) implements HyperionApi {
+
+    @Override
+    public void worldGroups(final @Nullable Function<World, String> groupOf) {
+        WorldLinks.groupOf(groupOf);
+    }
 }

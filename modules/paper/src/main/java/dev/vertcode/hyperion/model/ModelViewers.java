@@ -122,14 +122,14 @@ final class ModelViewers implements Viewers {
      */
     boolean wants(final Player player, final Location origin) {
         UUID id = player.getUniqueId();
-        if (this.hidden.contains(id) || !player.getWorld().equals(origin.getWorld())) {
+        if (this.hidden.contains(id) || !WorldLinks.same(player.getWorld(), origin.getWorld())) {
             return false;
         }
 
         // Paper marks Player#getLocation nullable; the Entity method it overrides never returns null.
         Entity self = player;
         double range = this.viewDistance;
-        if (self.getLocation().distanceSquared(origin) > range * range) {
+        if (WorldLinks.distanceSquared(self.getLocation(), origin) > range * range) {
             return false;
         }
 

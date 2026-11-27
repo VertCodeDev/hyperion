@@ -24,6 +24,7 @@ import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -529,7 +530,26 @@ final class HyperionModel implements Model {
             return List.of();
         }
 
-        return List.copyOf(here.getWorld().getNearbyPlayers(here, this.viewers.viewDistance()));
+        int range = this.viewers.viewDistance();
+        List<World> copies = WorldLinks.copiesOf(here.getWorld());
+        if (copies.isEmpty()) {
+            return List.copyOf(here.getWorld().getNearbyPlayers(here, range));
+        }
+
+        // Players in a copy of this world see the model at the same spot. Their worlds are other
+        // regions, so they are picked from the world's player list rather than a nearby search.
+        List<Player> all = new ArrayList<>(here.getWorld().getNearbyPlayers(here, range));
+        for (World copy : copies) {
+            for (Player player : copy.getPlayers()) {
+                // Paper marks Player#getLocation nullable; the Entity method it overrides never returns null.
+                Entity self = player;
+                if (WorldLinks.distanceSquared(self.getLocation(), here) <= (double) range * range) {
+                    all.add(player);
+                }
+            }
+        }
+
+        return all;
     }
 
     /**
