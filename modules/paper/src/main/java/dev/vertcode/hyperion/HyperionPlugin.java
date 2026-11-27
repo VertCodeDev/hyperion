@@ -45,6 +45,7 @@ import dev.vertcode.hyperion.listener.ArmorEquipListener;
 import dev.vertcode.hyperion.listener.ArmorListener;
 import dev.vertcode.hyperion.listener.BaseEntityListener;
 import dev.vertcode.hyperion.listener.BedrockListener;
+import dev.vertcode.hyperion.listener.CanvasWorldListener;
 import dev.vertcode.hyperion.listener.EffectListener;
 import dev.vertcode.hyperion.listener.PlayerAnimationListener;
 import dev.vertcode.hyperion.listener.HitboxListener;
@@ -187,6 +188,15 @@ public final class HyperionPlugin extends JavaPlugin {
         events.registerEvents(new ArmorListener(armorTracker), this);
         events.registerEvents(new PlayerAnimationListener(playerAnimations, skins, registry), this);
         events.registerEvents(new ArmorEquipListener(armor, armorTracker, events, !Feature.EQUIPPABLE.availableOn(version)), this);
+        CanvasWorldListener.register(
+                this,
+                player -> {
+                    models.lose(player.getUniqueId(), false);
+                    playerAnimations.stop(player);
+                    effects.cameras().release(player);
+                },
+                player -> models.lose(player.getUniqueId(), false)
+        );
         EventManager packets = PacketEvents.getAPI().getEventManager();
         this.packetListeners = List.of(
                 packets.registerListener(new BaseEntityListener(models), PacketListenerPriority.NORMAL),
